@@ -642,6 +642,35 @@ function App() {
     await loadProjectStatuses()
   }
 
+  const advanceProjectPhase = async (project: ProjectSessionStatus) => {
+    setProjectStatusMessage(`Moving ${project.project_name} to next phase...`)
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectStatusMessage('Next phase staged. Supabase env vars are not connected yet.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('project_session_status')
+      .update({
+        status: 'active',
+        health: 'green',
+        blocker: null,
+        last_update: `Omar moved this project to next phase / follow-up on ${new Date().toLocaleDateString()}.`,
+        next_action: `Execute next phase / follow-up for ${project.project_name}.`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', project.id)
+
+    if (error) {
+      setProjectStatusMessage('Next phase could not be saved. Confirm internal update policy is active.')
+      return
+    }
+
+    setProjectStatusMessage(`${project.project_name} moved to next phase.`)
+    await loadProjectStatuses()
+  }
+
   const saveCustomDecision = async (project: ProjectSessionStatus) => {
     const trimmedDecision = customDecision.trim()
     if (!trimmedDecision) {
@@ -891,16 +920,27 @@ function App() {
                   </div>
                 )}
                 <div className="decision-actions">
-                  <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'active')}>
+                  <button
+                    type="button"
+                    className="decision-primary"
+                    onClick={() => updateProjectOperatingStatus(selectedActionProject, 'active')}
+                  >
                     Approve / Move Active
                   </button>
-                  <button type="button" onClick={() => requestProjectUpdate(selectedActionProject)}>
+                  <button type="button" className="decision-forward" onClick={() => advanceProjectPhase(selectedActionProject)}>
+                    Next / Follow Up
+                  </button>
+                  <button type="button" className="decision-update" onClick={() => requestProjectUpdate(selectedActionProject)}>
                     Ask Elara for Update
                   </button>
                   <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'waiting')}>
                     Keep Waiting
                   </button>
-                  <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'complete')}>
+                  <button
+                    type="button"
+                    className="decision-complete"
+                    onClick={() => updateProjectOperatingStatus(selectedActionProject, 'complete')}
+                  >
                     Mark Done
                   </button>
                 </div>

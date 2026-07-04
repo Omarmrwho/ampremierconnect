@@ -739,17 +739,22 @@ textarea {
   font-weight: 850;
 }
 
-.decision-actions button:first-child {
+.decision-actions .decision-primary {
   color: #ffffff;
   background: #133c4f;
 }
 
-.decision-actions button:nth-child(2) {
+.decision-actions .decision-forward {
+  color: #ffffff;
+  background: #147a5c;
+}
+
+.decision-actions .decision-update {
   color: #ffffff;
   background: #b95f22;
 }
 
-.decision-actions button:last-child {
+.decision-actions .decision-complete {
   color: #174531;
   background: #e4f5ea;
 }
