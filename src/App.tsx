@@ -1,7 +1,9 @@
 import {
   ArrowRight,
   BadgeCheck,
+  BriefcaseBusiness,
   Building2,
+  CalendarDays,
   CircleAlert,
   CircleCheck,
   ClipboardCheck,
@@ -10,12 +12,15 @@ import {
   Filter,
   FileText,
   Gauge,
+  Lightbulb,
   LockKeyhole,
   LogOut,
   MailCheck,
+  Megaphone,
   MessageCircle,
   Radio,
   ShieldCheck,
+  Target,
   UserRound,
   UsersRound,
   Zap,
@@ -108,6 +113,64 @@ const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as co
 
 type ProjectFilter = (typeof projectFilters)[number]
 type ProjectOperatingStatus = ProjectSessionStatus['status']
+type WorkspaceTab = 'command' | 'construction' | 'crm' | 'campaigns' | 'ideas' | 'agents'
+
+type WorkspaceRecord = {
+  type: string
+  stage: string
+  objective: string
+  construction: {
+    phase: string
+    nextMilestone: string
+    schedule: { name: string; status: string; owner: string; note: string }[]
+  }
+  crm: {
+    pipelineValue: string
+    companies: { name: string; stage: string; nextStep: string; owner: string }[]
+  }
+  campaigns: {
+    name: string
+    channel: string
+    status: string
+    recommendation: string
+  }[]
+  ideas: {
+    title: string
+    score: string
+    nextMove: string
+  }[]
+  agents: {
+    role: string
+    assignment: string
+    output: string
+  }[]
+}
+
+const workspaceTabs: { id: WorkspaceTab; label: string }[] = [
+  { id: 'command', label: 'Command' },
+  { id: 'construction', label: 'Schedule' },
+  { id: 'crm', label: 'CRM' },
+  { id: 'campaigns', label: 'Campaigns' },
+  { id: 'ideas', label: 'Ideas' },
+  { id: 'agents', label: 'Agents' },
+]
+
+const starterProjects: ProjectSessionStatus[] = [
+  {
+    id: 'starter-am-premier-station',
+    project_name: 'AM Premier Station',
+    client_name: 'AM Premier Solutions',
+    status: 'active',
+    health: 'yellow',
+    source_session_key: null,
+    source_session_label: 'construction command room',
+    owner: 'Elara / Construction Manager Agent',
+    last_update: 'Construction project workspace created for schedule, CRM, campaigns, ideas, and agent recommendations.',
+    next_action: 'Confirm site package, permits, utility requirements, contractor roles, and the first 7-day construction lookahead.',
+    blocker: null,
+    updated_at: new Date().toISOString(),
+  },
+]
 
 const projectStats: Record<
   string,
@@ -276,6 +339,206 @@ const projectStats: Record<
   },
 }
 
+const defaultWorkspace: WorkspaceRecord = {
+  type: 'Operating project',
+  stage: 'Active buildout',
+  objective: 'Centralize project status, CRM movement, campaign planning, and Elara recommendations in one command room.',
+  construction: {
+    phase: 'Operating setup',
+    nextMilestone: 'Define the next measurable deliverable and owner.',
+    schedule: [
+      {
+        name: 'Confirm scope',
+        status: 'active',
+        owner: 'Omar / Elara',
+        note: 'Lock the project objective, constraints, required documents, and success criteria.',
+      },
+      {
+        name: 'Build execution plan',
+        status: 'waiting',
+        owner: 'Elara',
+        note: 'Convert the objective into milestones, dependencies, and weekly next actions.',
+      },
+      {
+        name: 'Connect CRM and campaign lanes',
+        status: 'waiting',
+        owner: 'Sales + Marketing agents',
+        note: 'Attach relevant contacts, companies, opportunities, and campaign ideas.',
+      },
+    ],
+  },
+  crm: {
+    pipelineValue: 'TBD',
+    companies: [
+      {
+        name: 'Primary client / owner',
+        stage: 'Qualification',
+        nextStep: 'Capture decision maker, budget, timeline, and next meeting.',
+        owner: 'CRM Agent',
+      },
+    ],
+  },
+  campaigns: [
+    {
+      name: 'Project announcement angle',
+      channel: 'LinkedIn / email',
+      status: 'draft',
+      recommendation: 'Turn the project into credibility content once the value prop and proof points are clear.',
+    },
+  ],
+  ideas: [
+    {
+      title: 'Turn this project into a repeatable offer',
+      score: 'High',
+      nextMove: 'Identify what part of the project can become a packaged service, template, or white-label module.',
+    },
+  ],
+  agents: [
+    {
+      role: 'Elara / Executive Operator',
+      assignment: 'Keep the project moving, identify blockers, and recommend the next owner decision.',
+      output: 'Daily next-action brief and decision log.',
+    },
+  ],
+}
+
+const projectWorkspaces: Record<string, WorkspaceRecord> = {
+  'AM Premier Station': {
+    type: 'Construction / development',
+    stage: 'Pre-construction command setup',
+    objective:
+      'Track the AM Premier Station build from concept through permitting, procurement, civil work, electrical work, commissioning, and launch.',
+    construction: {
+      phase: 'Pre-construction',
+      nextMilestone: 'Confirm site package, permits, utility requirements, and construction responsibility matrix.',
+      schedule: [
+        {
+          name: 'Owner scope and site package',
+          status: 'active',
+          owner: 'Omar',
+          note: 'Gather site drawings, charger/equipment scope, landlord/owner requirements, and utility account details.',
+        },
+        {
+          name: 'Permitting and AHJ path',
+          status: 'waiting',
+          owner: 'Construction Manager Agent',
+          note: 'Identify permit requirements, reviewer, expected duration, and documents needed before submittal.',
+        },
+        {
+          name: 'Utility coordination',
+          status: 'waiting',
+          owner: 'Power Infrastructure Agent',
+          note: 'Confirm service capacity, transformer needs, interconnection steps, and lead times.',
+        },
+        {
+          name: 'Vendor and procurement board',
+          status: 'waiting',
+          owner: 'Procurement Agent',
+          note: 'Track charger/equipment, switchgear, conduit, concrete, signage, and long-lead materials.',
+        },
+        {
+          name: 'Construction lookahead',
+          status: 'planned',
+          owner: 'Construction Manager Agent',
+          note: 'Build a weekly sequence for civil, trenching, electrical rough-in, equipment set, testing, and punch list.',
+        },
+      ],
+    },
+    crm: {
+      pipelineValue: 'Station-dependent',
+      companies: [
+        {
+          name: 'Site owner / landlord',
+          stage: 'Decision owner',
+          nextStep: 'Confirm approval authority, lease/site control, insurance requirements, and communication cadence.',
+          owner: 'CRM Agent',
+        },
+        {
+          name: 'Utility / service provider',
+          stage: 'Technical dependency',
+          nextStep: 'Request capacity confirmation, transformer lead time, and required application package.',
+          owner: 'Power Agent',
+        },
+        {
+          name: 'Electrical contractor',
+          stage: 'Vendor qualification',
+          nextStep: 'Collect quote, license, availability, scope exclusions, and mobilization window.',
+          owner: 'Vendor Agent',
+        },
+      ],
+    },
+    campaigns: [
+      {
+        name: 'AM Premier Station build-in-public',
+        channel: 'LinkedIn + project photos',
+        status: 'draft',
+        recommendation:
+          'Use milestone posts to show AM Premier can execute infrastructure, not just talk about EV charging.',
+      },
+      {
+        name: 'Site-host sales campaign',
+        channel: 'Email + calls',
+        status: 'recommended',
+        recommendation:
+          'Turn the station into proof for nearby property owners: reduce range anxiety, create amenity value, and monetize parking/site traffic.',
+      },
+      {
+        name: 'Vendor partner campaign',
+        channel: 'Direct outreach',
+        status: 'recommended',
+        recommendation:
+          'Recruit electrical, civil, signage, and maintenance partners using this project as the first qualification lane.',
+      },
+    ],
+    ideas: [
+      {
+        title: 'Construction command dashboard as a sellable product',
+        score: 'Very high',
+        nextMove: 'Capture every schedule, blocker, vendor, and decision from AM Premier Station as a reusable white-label workflow.',
+      },
+      {
+        title: 'Station launch sponsor package',
+        score: 'Medium',
+        nextMove: 'Package local partner visibility, ribbon-cutting content, and nearby business cross-promotion.',
+      },
+      {
+        title: 'EV site-host ROI calculator',
+        score: 'High',
+        nextMove: 'Build a simple calculator from utilization, install cost, power cost, parking traffic, and incentives.',
+      },
+    ],
+    agents: [
+      {
+        role: 'Construction Manager Agent',
+        assignment: 'Own schedule, milestones, blockers, weekly lookahead, permit path, and contractor next steps.',
+        output: 'Construction schedule, blocker log, and next 7-day action plan.',
+      },
+      {
+        role: 'Sales Agent',
+        assignment: 'Convert the project into site-host opportunities, partner outreach, and CRM follow-ups.',
+        output: 'Lead list, pipeline stages, call script, and follow-up sequence.',
+      },
+      {
+        role: 'Marketing Agent',
+        assignment: 'Create project credibility content, launch content, and proof-driven campaigns.',
+        output: 'Campaign brief, content calendar, post copy, and asset checklist.',
+      },
+      {
+        role: 'Power Infrastructure Agent',
+        assignment: 'Track electrical service, transformer, interconnection, load, and utility risk.',
+        output: 'Utility coordination checklist and technical risk memo.',
+      },
+    ],
+  },
+  'AM Premier Connect Portal': {
+    ...defaultWorkspace,
+    type: 'SaaS / internal operating system',
+    stage: 'MVP expansion',
+    objective:
+      'Turn AM Premier Connect into a project management, CRM, campaign, idea, and agent workforce command system.',
+  },
+}
+
 const getActionPriority = (project: ProjectSessionStatus) => {
   if (project.status === 'blocked' || project.health === 'red') {
     return { label: 'Critical', score: 3, tone: 'critical' }
@@ -349,25 +612,35 @@ function App() {
   const [projectStatusMessage, setProjectStatusMessage] = useState('')
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('command')
   const [customDecision, setCustomDecision] = useState('')
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
 
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
   const isChatRoute = routePath === '/chat'
-  const activeProjects = projectStatuses.filter((project) => project.status === 'active').length
-  const blockedProjects = projectStatuses.filter((project) => project.status === 'blocked').length
-  const waitingProjects = projectStatuses.filter((project) => project.status === 'waiting').length
-  const needsActionProjects = projectStatuses.filter(
+  const operatingProjects = [
+    ...projectStatuses,
+    ...starterProjects.filter(
+      (starterProject) => !projectStatuses.some((project) => project.project_name === starterProject.project_name),
+    ),
+  ]
+  const activeProjects = operatingProjects.filter((project) => project.status === 'active').length
+  const blockedProjects = operatingProjects.filter((project) => project.status === 'blocked').length
+  const waitingProjects = operatingProjects.filter((project) => project.status === 'waiting').length
+  const needsActionProjects = operatingProjects.filter(
     (project) => project.status === 'blocked' || Boolean(project.blocker),
   ).length
   const filteredProjects =
-    projectFilter === 'all' ? projectStatuses : projectStatuses.filter((project) => project.status === projectFilter)
-  const actionQueueProjects = [...projectStatuses]
+    projectFilter === 'all' ? operatingProjects : operatingProjects.filter((project) => project.status === projectFilter)
+  const actionQueueProjects = [...operatingProjects]
     .filter((project) => project.status === 'waiting' || project.status === 'blocked' || Boolean(project.blocker))
     .sort((left, right) => getActionPriority(right).score - getActionPriority(left).score)
-  const selectedActionProject = projectStatuses.find((project) => project.id === selectedActionProjectId) || null
+  const selectedActionProject = operatingProjects.find((project) => project.id === selectedActionProjectId) || null
   const selectedProjectStats = selectedActionProject ? projectStats[selectedActionProject.project_name] : null
+  const selectedWorkspace = selectedActionProject
+    ? projectWorkspaces[selectedActionProject.project_name] || defaultWorkspace
+    : null
 
   const roleMessage = useMemo(() => {
     if (selectedRole === 'Vendor') {
@@ -733,6 +1006,29 @@ function App() {
     await loadProjectStatuses()
   }
 
+  const createAgentWorkOrder = async (project: ProjectSessionStatus, workType: string, summary: string) => {
+    setProjectStatusMessage(`Creating ${workType} work order for ${project.project_name}...`)
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectStatusMessage(`${workType} work order staged. Supabase env vars are not connected yet.`)
+      return
+    }
+
+    const { error } = await supabase.from('intake_requests').insert({
+      requester_id: session?.user.id ?? null,
+      request_type: workType,
+      company: project.client_name || project.project_name,
+      summary: `${project.project_name}: ${summary}`,
+      status: 'draft',
+    })
+
+    setProjectStatusMessage(
+      error
+        ? `${workType} work order could not be saved. Check intake policies.`
+        : `${workType} work order created for ${project.project_name}.`,
+    )
+  }
+
   if (isCommandRoute) {
     return (
       <main className="portal-shell command-page-shell">
@@ -908,6 +1204,250 @@ function App() {
                     </div>
                   </dl>
                 </div>
+                {selectedWorkspace && (
+                  <div className="workspace-command-center">
+                    <div className="workspace-hero">
+                      <div>
+                        <span className="decision-label">Workspace</span>
+                        <h3>{selectedWorkspace.type}</h3>
+                        <p>{selectedWorkspace.objective}</p>
+                      </div>
+                      <div className="workspace-stage">
+                        <span>Stage</span>
+                        <strong>{selectedWorkspace.stage}</strong>
+                      </div>
+                    </div>
+
+                    <div className="workspace-tabs" role="tablist" aria-label="Project workspace sections">
+                      {workspaceTabs.map((tab) => (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={workspaceTab === tab.id}
+                          className={workspaceTab === tab.id ? 'active' : ''}
+                          key={tab.id}
+                          onClick={() => setWorkspaceTab(tab.id)}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {workspaceTab === 'command' && (
+                      <div className="workspace-tab-panel">
+                        <div className="workspace-kpi-grid">
+                          <div>
+                            <BriefcaseBusiness size={18} />
+                            <span>Project Type</span>
+                            <strong>{selectedWorkspace.type}</strong>
+                          </div>
+                          <div>
+                            <CalendarDays size={18} />
+                            <span>Current Phase</span>
+                            <strong>{selectedWorkspace.construction.phase}</strong>
+                          </div>
+                          <div>
+                            <Target size={18} />
+                            <span>CRM Value</span>
+                            <strong>{selectedWorkspace.crm.pipelineValue}</strong>
+                          </div>
+                          <div>
+                            <Megaphone size={18} />
+                            <span>Campaigns</span>
+                            <strong>{selectedWorkspace.campaigns.length}</strong>
+                          </div>
+                        </div>
+                        <div className="workspace-recommendation">
+                          <Lightbulb size={19} />
+                          <div>
+                            <strong>Elara recommendation</strong>
+                            <p>
+                              Treat this as a live operating room: every project should have a schedule, CRM lane,
+                              campaign lane, agent assignments, and one clear next decision.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {workspaceTab === 'construction' && (
+                      <div className="workspace-tab-panel">
+                        <div className="workspace-section-head">
+                          <div>
+                            <span className="decision-label">Construction Manager</span>
+                            <h3>{selectedWorkspace.construction.phase}</h3>
+                            <p>{selectedWorkspace.construction.nextMilestone}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              createAgentWorkOrder(
+                                selectedActionProject,
+                                'construction_manager',
+                                `Build the next 7-day construction lookahead. Milestone: ${selectedWorkspace.construction.nextMilestone}`,
+                              )
+                            }
+                          >
+                            Ask Construction Manager
+                          </button>
+                        </div>
+                        <div className="schedule-list">
+                          {selectedWorkspace.construction.schedule.map((item) => (
+                            <article className="schedule-row" key={item.name}>
+                              <span className={`schedule-status ${item.status}`}>{item.status}</span>
+                              <div>
+                                <strong>{item.name}</strong>
+                                <p>{item.note}</p>
+                                <small>{item.owner}</small>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {workspaceTab === 'crm' && (
+                      <div className="workspace-tab-panel">
+                        <div className="workspace-section-head">
+                          <div>
+                            <span className="decision-label">CRM</span>
+                            <h3>Pipeline and relationships</h3>
+                            <p>Track companies, decision owners, deal stages, next steps, and follow-up owners.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              createAgentWorkOrder(
+                                selectedActionProject,
+                                'crm_agent',
+                                'Create or refresh the CRM pipeline, contact map, next follow-ups, and opportunity stages.',
+                              )
+                            }
+                          >
+                            Ask CRM Agent
+                          </button>
+                        </div>
+                        <div className="crm-grid">
+                          {selectedWorkspace.crm.companies.map((company) => (
+                            <article className="crm-card" key={company.name}>
+                              <span>{company.stage}</span>
+                              <h3>{company.name}</h3>
+                              <p>{company.nextStep}</p>
+                              <small>{company.owner}</small>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {workspaceTab === 'campaigns' && (
+                      <div className="workspace-tab-panel">
+                        <div className="workspace-section-head">
+                          <div>
+                            <span className="decision-label">Campaign Engine</span>
+                            <h3>Marketing and sales campaigns</h3>
+                            <p>Turn project movement into outreach, content, launch assets, and sales sequences.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              createAgentWorkOrder(
+                                selectedActionProject,
+                                'campaign_agent',
+                                'Create a marketing campaign and sales campaign with audience, offer, channels, messages, and execution steps.',
+                              )
+                            }
+                          >
+                            Generate Campaign
+                          </button>
+                        </div>
+                        <div className="campaign-grid">
+                          {selectedWorkspace.campaigns.map((campaign) => (
+                            <article className="campaign-card" key={campaign.name}>
+                              <div>
+                                <Megaphone size={18} />
+                                <span>{campaign.status}</span>
+                              </div>
+                              <h3>{campaign.name}</h3>
+                              <small>{campaign.channel}</small>
+                              <p>{campaign.recommendation}</p>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {workspaceTab === 'ideas' && (
+                      <div className="workspace-tab-panel">
+                        <div className="workspace-section-head">
+                          <div>
+                            <span className="decision-label">Idea Room</span>
+                            <h3>Strategic ideas and experiments</h3>
+                            <p>Capture raw ideas, score them, and turn the strongest ones into execution tracks.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              createAgentWorkOrder(
+                                selectedActionProject,
+                                'idea_room',
+                                'Run an idea-room session and convert the strongest ideas into campaigns, tasks, and risks.',
+                              )
+                            }
+                          >
+                            Run Idea Room
+                          </button>
+                        </div>
+                        <div className="idea-list">
+                          {selectedWorkspace.ideas.map((idea) => (
+                            <article className="idea-row" key={idea.title}>
+                              <Lightbulb size={18} />
+                              <div>
+                                <strong>{idea.title}</strong>
+                                <p>{idea.nextMove}</p>
+                              </div>
+                              <span>{idea.score}</span>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {workspaceTab === 'agents' && (
+                      <div className="workspace-tab-panel">
+                        <div className="workspace-section-head">
+                          <div>
+                            <span className="decision-label">Agent Workforce</span>
+                            <h3>Assigned operators</h3>
+                            <p>Each project gets specialized agents that think, recommend, and produce execution assets.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              createAgentWorkOrder(
+                                selectedActionProject,
+                                'agent_workforce',
+                                'Assign the right agents and generate their first deliverables for this project.',
+                              )
+                            }
+                          >
+                            Activate Agents
+                          </button>
+                        </div>
+                        <div className="agent-grid">
+                          {selectedWorkspace.agents.map((agent) => (
+                            <article className="agent-card" key={agent.role}>
+                              <UserRound size={18} />
+                              <h3>{agent.role}</h3>
+                              <p>{agent.assignment}</p>
+                              <small>{agent.output}</small>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {selectedProjectStats ? (
                   <div className="project-stats-panel">
                     <div>

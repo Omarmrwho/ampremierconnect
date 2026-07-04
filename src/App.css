@@ -796,6 +796,251 @@ textarea {
   background: #f8faf8;
 }
 
+.workspace-command-center {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(19, 60, 79, 0.1);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.workspace-hero,
+.workspace-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workspace-hero h3,
+.workspace-section-head h3 {
+  margin-bottom: 7px;
+  font-size: 22px;
+}
+
+.workspace-stage {
+  display: grid;
+  gap: 5px;
+  min-width: 180px;
+  padding: 13px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(19, 60, 79, 0.1);
+}
+
+.workspace-stage span,
+.workspace-kpi-grid span,
+.schedule-status,
+.crm-card span,
+.campaign-card span,
+.idea-row span {
+  color: #65737a;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.workspace-stage strong {
+  color: #133c4f;
+}
+
+.workspace-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 16px 0;
+  padding: 5px;
+  border: 1px solid rgba(19, 60, 79, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.workspace-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.workspace-tabs button {
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 7px;
+  color: #526168;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.workspace-tabs button.active {
+  color: #ffffff;
+  background: #133c4f;
+}
+
+.workspace-tab-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-kpi-grid,
+.crm-grid,
+.campaign-grid,
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workspace-kpi-grid div,
+.crm-card,
+.campaign-card,
+.agent-card,
+.workspace-recommendation,
+.schedule-row,
+.idea-row {
+  border: 1px solid rgba(19, 60, 79, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.workspace-kpi-grid div {
+  display: grid;
+  gap: 7px;
+  min-height: 116px;
+  padding: 14px;
+}
+
+.workspace-kpi-grid svg,
+.workspace-recommendation svg,
+.campaign-card svg,
+.agent-card svg,
+.idea-row svg {
+  color: #b95f22;
+}
+
+.workspace-kpi-grid strong {
+  color: #10232b;
+  line-height: 1.2;
+}
+
+.workspace-recommendation {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  background: #fffaf3;
+}
+
+.workspace-recommendation strong {
+  color: #10232b;
+}
+
+.workspace-recommendation p,
+.workspace-section-head p,
+.crm-card p,
+.campaign-card p,
+.agent-card p,
+.idea-row p,
+.schedule-row p {
+  margin-bottom: 0;
+  color: #526168;
+  line-height: 1.42;
+}
+
+.workspace-section-head button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 13px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #133c4f;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.schedule-list,
+.idea-list {
+  display: grid;
+  gap: 10px;
+}
+
+.schedule-row {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px;
+}
+
+.schedule-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border-radius: 999px;
+  color: #174531;
+  background: #e4f5ea;
+}
+
+.schedule-status.waiting,
+.schedule-status.planned {
+  color: #7a4a14;
+  background: #fff3dc;
+}
+
+.schedule-row strong,
+.crm-card h3,
+.campaign-card h3,
+.agent-card h3,
+.idea-row strong {
+  color: #10232b;
+}
+
+.schedule-row small,
+.crm-card small,
+.campaign-card small,
+.agent-card small {
+  display: block;
+  margin-top: 8px;
+  color: #7a858a;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.crm-grid,
+.campaign-grid,
+.agent-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.crm-card,
+.campaign-card,
+.agent-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.campaign-card > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.idea-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 13px;
+}
+
+.idea-row span {
+  color: #9b5a22;
+}
+
 .project-stats-panel h3 {
   margin-bottom: 7px;
   font-size: 22px;
@@ -1695,8 +1940,45 @@ textarea {
 
   .decision-facts,
   .stats-grid,
-  .stats-lanes {
+  .stats-lanes,
+  .workspace-kpi-grid,
+  .crm-grid,
+  .campaign-grid,
+  .agent-grid {
     gap: 8px;
+  }
+
+  .workspace-hero,
+  .workspace-section-head {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-stage {
+    min-width: 0;
+  }
+
+  .workspace-section-head button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .workspace-kpi-grid,
+  .crm-grid,
+  .campaign-grid,
+  .agent-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-row,
+  .idea-row {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-status {
+    justify-content: flex-start;
+    width: max-content;
+    padding: 0 10px;
   }
 
   .stats-lanes div {

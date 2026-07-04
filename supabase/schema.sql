@@ -63,10 +63,61 @@ create table if not exists public.project_session_status (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.project_crm_records (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.project_session_status(id) on delete cascade,
+  company_name text not null,
+  contact_name text,
+  stage text not null default 'qualification',
+  owner text,
+  next_step text,
+  value_estimate text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.project_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.project_session_status(id) on delete cascade,
+  campaign_name text not null,
+  campaign_type text not null default 'sales',
+  channel text,
+  status text not null default 'draft',
+  recommendation text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.project_ideas (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.project_session_status(id) on delete cascade,
+  title text not null,
+  score text,
+  next_move text,
+  status text not null default 'new',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.project_agent_recommendations (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.project_session_status(id) on delete cascade,
+  agent_role text not null,
+  assignment text not null,
+  output_target text,
+  status text not null default 'recommended',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.portal_profiles enable row level security;
 alter table public.access_requests enable row level security;
 alter table public.intake_requests enable row level security;
 alter table public.project_session_status enable row level security;
+alter table public.project_crm_records enable row level security;
+alter table public.project_campaigns enable row level security;
+alter table public.project_ideas enable row level security;
+alter table public.project_agent_recommendations enable row level security;
 
 create or replace function public.is_internal_admin()
 returns boolean
@@ -216,6 +267,38 @@ drop policy if exists "Internal admins can update project session status" on pub
 create policy "Internal admins can update project session status"
 on public.project_session_status
 for update
+to authenticated
+using (public.is_internal_admin())
+with check (public.is_internal_admin());
+
+drop policy if exists "Internal admins can manage project crm records" on public.project_crm_records;
+create policy "Internal admins can manage project crm records"
+on public.project_crm_records
+for all
+to authenticated
+using (public.is_internal_admin())
+with check (public.is_internal_admin());
+
+drop policy if exists "Internal admins can manage project campaigns" on public.project_campaigns;
+create policy "Internal admins can manage project campaigns"
+on public.project_campaigns
+for all
+to authenticated
+using (public.is_internal_admin())
+with check (public.is_internal_admin());
+
+drop policy if exists "Internal admins can manage project ideas" on public.project_ideas;
+create policy "Internal admins can manage project ideas"
+on public.project_ideas
+for all
+to authenticated
+using (public.is_internal_admin())
+with check (public.is_internal_admin());
+
+drop policy if exists "Internal admins can manage project agent recommendations" on public.project_agent_recommendations;
+create policy "Internal admins can manage project agent recommendations"
+on public.project_agent_recommendations
+for all
 to authenticated
 using (public.is_internal_admin())
 with check (public.is_internal_admin());
@@ -422,4 +505,29 @@ where not exists (
   select 1
   from public.project_session_status
   where project_name = 'Power Intelligence Reports'
+);
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action
+)
+select
+  'AM Premier Station',
+  'AM Premier Solutions',
+  'active',
+  'yellow',
+  'construction command room',
+  'Elara / Construction Manager Agent',
+  'Construction project workspace created for schedule, CRM, campaigns, ideas, and agent recommendations.',
+  'Confirm site package, permits, utility requirements, contractor roles, and the first 7-day construction lookahead.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'AM Premier Station'
 );
