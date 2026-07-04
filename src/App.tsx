@@ -12,14 +12,16 @@ import {
   LockKeyhole,
   LogOut,
   MailCheck,
+  MessageCircle,
   Radio,
+  Send,
   ShieldCheck,
   UserRound,
   UsersRound,
   Zap,
 } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
@@ -47,6 +49,13 @@ type AccessRequest = {
   requested_role: PortalRole
   company: string | null
   status: string
+  created_at: string
+}
+
+type SiteChatMessage = {
+  id: string
+  request_type: string
+  summary: string
   created_at: string
 }
 
@@ -345,10 +354,14 @@ function App() {
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
   const [customDecision, setCustomDecision] = useState('')
+  const [chatMessages, setChatMessages] = useState<SiteChatMessage[]>([])
+  const [chatDraft, setChatDraft] = useState('')
+  const [chatStatus, setChatStatus] = useState('')
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
 
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
+  const isChatRoute = routePath === '/chat'
   const activeProjects = projectStatuses.filter((project) => project.status === 'active').length
   const blockedProjects = projectStatuses.filter((project) => project.status === 'blocked').length
   const waitingProjects = projectStatuses.filter((project) => project.status === 'waiting').length
@@ -498,6 +511,36 @@ function App() {
     setProjectStatusMessage('')
   }
 
+  const loadChatMessages = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase || !session?.user) {
+      return
+    }
+
+    setChatStatus('Loading chat...')
+    const { data, error } = await supabase
+      .from('intake_requests')
+      .select('id,request_type,summary,created_at')
+      .eq('requester_id', session.user.id)
+      .in('request_type', ['site_chat_message', 'site_chat_reply'])
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      setChatStatus('Chat could not load. Confirm intake policies are active.')
+      return
+    }
+
+    setChatMessages(data ?? [])
+    setChatStatus('')
+  }, [session?.user])
+
+  useEffect(() => {
+    if (session?.user) {
+      loadChatMessages()
+    } else {
+      setChatMessages([])
+    }
+  }, [loadChatMessages, session])
+
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setAccessStatus('Saving access request...')
@@ -632,6 +675,45 @@ function App() {
     setProjectStatusMessage(
       error ? 'Update request could not be logged. Check intake policies.' : `Update requested for ${project.project_name}.`,
     )
+  }
+
+  const sendChatMessage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const message = chatDraft.trim()
+
+    if (!message) {
+      return
+    }
+
+    setChatStatus('Sending message...')
+
+    if (!isSupabaseConfigured || !supabase || !session?.user) {
+      const now = new Date().toISOString()
+      setChatMessages((messages) => [
+        ...messages,
+        { id: `local-${now}`, request_type: 'site_chat_message', summary: message, created_at: now },
+      ])
+      setChatDraft('')
+      setChatStatus('Message staged locally. Sign in with Supabase enabled to save it.')
+      return
+    }
+
+    const { error } = await supabase.from('intake_requests').insert({
+      requester_id: session.user.id,
+      request_type: 'site_chat_message',
+      company: profile?.company || 'AM Premier Connect',
+      summary: message,
+      status: 'draft',
+    })
+
+    if (error) {
+      setChatStatus('Message could not be saved. Check intake policies.')
+      return
+    }
+
+    setChatDraft('')
+    setChatStatus('Message saved.')
+    await loadChatMessages()
   }
 
   const updateProjectOperatingStatus = async (project: ProjectSessionStatus, status: ProjectOperatingStatus) => {
@@ -1119,6 +1201,114 @@ function App() {
     )
   }
 
+  if (isChatRoute) {
+    return (
+      <main className="portal-shell chat-page-shell">
+        <nav className="topbar" aria-label="Chat navigation">
+          <a className="brand" href="/" aria-label="AM Premier Connect home">
+            <span className="brand-mark">AP</span>
+            <span>
+              <strong>AM Premier Connect</strong>
+              <small>Site chat</small>
+            </span>
+          </a>
+          <div className="nav-actions">
+            <button type="button" onClick={() => navigateTo('/')}>
+              Portal Home
+            </button>
+            {isInternal && (
+              <button type="button" onClick={() => navigateTo('/command')}>
+                Command Portal
+              </button>
+            )}
+            {session && (
+              <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
+        </nav>
+
+        <section className="chat-shell" aria-label="Elara site chat">
+          <div className="chat-header">
+            <div className="panel-heading">
+              <MessageCircle size={21} />
+              <div>
+                <p className="eyebrow">Elara</p>
+                <h1>AM Premier site chat</h1>
+              </div>
+            </div>
+            <span>{session ? session.user.email : 'Sign in required'}</span>
+          </div>
+
+          {session ? (
+            <>
+              <div className="chat-thread" aria-live="polite">
+                {chatMessages.length === 0 ? (
+                  <article className="chat-empty">
+                    <MessageCircle size={22} />
+                    <h2>Start the thread here.</h2>
+                    <p>Messages stay with this portal account.</p>
+                  </article>
+                ) : (
+                  chatMessages.map((message) => {
+                    const isUserMessage = message.request_type === 'site_chat_message'
+
+                    return (
+                      <article className={`chat-bubble ${isUserMessage ? 'user' : 'assistant'}`} key={message.id}>
+                        <span>{isUserMessage ? 'Omar' : 'Elara'}</span>
+                        <p>{message.summary}</p>
+                        <small>{new Date(message.created_at).toLocaleString()}</small>
+                      </article>
+                    )
+                  })
+                )}
+              </div>
+
+              <form className="chat-composer" onSubmit={sendChatMessage}>
+                <textarea
+                  aria-label="Message Elara"
+                  onChange={(event) => {
+                    setChatDraft(event.target.value)
+                    setChatStatus('')
+                  }}
+                  placeholder="Message Elara from the AM Premier portal..."
+                  required
+                  value={chatDraft}
+                />
+                <button type="submit">
+                  Send <Send size={17} />
+                </button>
+              </form>
+            </>
+          ) : (
+            <section className="locked-command-state">
+              <div className="login-panel">
+                <div className="panel-heading">
+                  <LockKeyhole size={20} />
+                  <div>
+                    <h1>Sign in to open chat.</h1>
+                    <p>Use your AM Premier Connect portal account.</p>
+                  </div>
+                </div>
+                <button type="button" className="full-button" onClick={() => navigateTo('/')}>
+                  Return to portal login <ArrowRight size={18} />
+                </button>
+              </div>
+            </section>
+          )}
+
+          {chatStatus && (
+            <div className="success-note" role="status">
+              <ShieldCheck size={18} />
+              <span>{chatStatus}</span>
+            </div>
+          )}
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="portal-shell">
       <nav className="topbar" aria-label="Primary navigation">
@@ -1132,6 +1322,9 @@ function App() {
         <div className="nav-actions">
           <a href="#access">Request Portal Approval</a>
           <a href="#intake">Start Intake</a>
+          <button type="button" onClick={() => navigateTo('/chat')}>
+            Site Chat
+          </button>
           {session ? (
             <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
               <LogOut size={18} />
@@ -1183,6 +1376,9 @@ function App() {
                   Open Command Portal <Radio size={18} />
                 </button>
               )}
+              <button type="button" className="full-button" onClick={() => navigateTo('/chat')}>
+                Open Site Chat <MessageCircle size={18} />
+              </button>
               <button type="button" className="full-button" onClick={handleSignOut}>
                 Sign out <LogOut size={18} />
               </button>
