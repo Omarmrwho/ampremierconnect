@@ -19,7 +19,7 @@ import {
   Zap,
 } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
@@ -158,6 +158,7 @@ function App() {
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
   const [customDecision, setCustomDecision] = useState('')
+  const decisionDrawerRef = useRef<HTMLElement | null>(null)
 
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
@@ -250,6 +251,16 @@ function App() {
       loadProjectStatuses()
     }
   }, [isInternal])
+
+  useEffect(() => {
+    if (!selectedActionProjectId) {
+      return
+    }
+
+    window.setTimeout(() => {
+      decisionDrawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }, [selectedActionProjectId])
 
   const navigateTo = (path: string) => {
     window.history.pushState({}, '', path)
@@ -642,7 +653,7 @@ function App() {
             </div>
 
             {selectedActionProject && (
-              <section className="decision-drawer" aria-label="Decision detail">
+              <section className="decision-drawer" aria-label="Decision detail" ref={decisionDrawerRef}>
                 <div className="panel-heading">
                   <CircleAlert size={20} />
                   <div>
