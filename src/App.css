@@ -467,7 +467,7 @@ textarea {
 
 .command-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -491,6 +491,137 @@ textarea {
   color: #10232b;
   font-size: 32px;
   line-height: 1;
+}
+
+.command-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.movement-panel,
+.action-panel {
+  padding: 22px;
+  border: 1px solid rgba(19, 60, 79, 0.13);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(16, 35, 43, 0.08);
+}
+
+.movement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.movement-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 15px;
+  border-radius: 8px;
+  background: #f6f8f6;
+}
+
+.movement-grid span,
+.movement-grid small {
+  color: #65737a;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.movement-grid strong {
+  color: #133c4f;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.action-list {
+  display: grid;
+  gap: 10px;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(19, 60, 79, 0.11);
+  border-radius: 8px;
+  background: #f8faf8;
+}
+
+.action-row strong,
+.action-row span {
+  display: block;
+}
+
+.action-row span {
+  margin-top: 3px;
+  color: #65737a;
+  font-size: 13px;
+}
+
+.action-row button,
+.project-update-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #133c4f;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.project-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 22px 0 14px;
+}
+
+.project-toolbar > div:first-child,
+.filter-tabs {
+  display: flex;
+  align-items: center;
+}
+
+.project-toolbar > div:first-child {
+  gap: 8px;
+  color: #133c4f;
+}
+
+.filter-tabs {
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgba(19, 60, 79, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow-x: auto;
+}
+
+.filter-tabs button {
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 7px;
+  color: #526168;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.filter-tabs button.active {
+  color: #ffffff;
+  background: #133c4f;
 }
 
 .project-grid {
@@ -613,6 +744,11 @@ textarea {
   color: #65737a;
   font-size: 12px;
   font-weight: 750;
+}
+
+.project-update-button {
+  width: 100%;
+  margin-top: 14px;
 }
 
 .access-request-band .intake-panel {
@@ -743,6 +879,8 @@ textarea {
   .workspace-band,
   .metrics-row,
   .command-metrics,
+  .command-board,
+  .movement-grid,
   .project-grid {
     grid-template-columns: 1fr;
   }
@@ -766,6 +904,19 @@ textarea {
   }
 
   .request-row {
+    grid-template-columns: 1fr;
+  }
+
+  .project-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-tabs {
+    width: 100%;
+  }
+
+  .action-row {
     grid-template-columns: 1fr;
   }
 

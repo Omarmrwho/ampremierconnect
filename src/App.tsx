@@ -6,6 +6,7 @@ import {
   CircleCheck,
   ClipboardCheck,
   Clock3,
+  Filter,
   FileText,
   Gauge,
   LockKeyhole,
@@ -98,6 +99,10 @@ const readinessItems = [
   { label: 'Control', value: 'Internal approval workflow' },
 ]
 
+const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as const
+
+type ProjectFilter = (typeof projectFilters)[number]
+
 function App() {
   const [routePath, setRoutePath] = useState(() => window.location.pathname)
   const [selectedRole, setSelectedRole] = useState<(typeof roles)[number]>('Client')
@@ -117,12 +122,21 @@ function App() {
   const [adminStatus, setAdminStatus] = useState('')
   const [projectStatuses, setProjectStatuses] = useState<ProjectSessionStatus[]>([])
   const [projectStatusMessage, setProjectStatusMessage] = useState('')
+  const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
 
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
   const activeProjects = projectStatuses.filter((project) => project.status === 'active').length
   const blockedProjects = projectStatuses.filter((project) => project.status === 'blocked').length
   const waitingProjects = projectStatuses.filter((project) => project.status === 'waiting').length
+  const needsActionProjects = projectStatuses.filter(
+    (project) => project.status === 'blocked' || Boolean(project.blocker),
+  ).length
+  const filteredProjects =
+    projectFilter === 'all' ? projectStatuses : projectStatuses.filter((project) => project.status === projectFilter)
+  const actionQueueProjects = projectStatuses.filter(
+    (project) => project.status === 'waiting' || project.status === 'blocked' || Boolean(project.blocker),
+  )
 
   const roleMessage = useMemo(() => {
     if (selectedRole === 'Vendor') {
@@ -362,6 +376,29 @@ function App() {
     await loadAccessRequests()
   }
 
+  const requestProjectUpdate = async (project: ProjectSessionStatus) => {
+    setProjectStatusMessage(`Logging update request for ${project.project_name}...`)
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectStatusMessage('Update request staged. Supabase env vars are not connected yet.')
+      return
+    }
+
+    const { error } = await supabase.from('intake_requests').insert({
+      requester_id: session?.user.id ?? null,
+      request_type: 'project_update',
+      company: project.client_name || project.project_name,
+      summary: `Update requested for ${project.project_name}. Current status: ${project.status}. Next action: ${
+        project.next_action || 'Needs next action.'
+      }`,
+      status: 'draft',
+    })
+
+    setProjectStatusMessage(
+      error ? 'Update request could not be logged. Check intake policies.' : `Update requested for ${project.project_name}.`,
+    )
+  }
+
   if (isCommandRoute) {
     return (
       <main className="portal-shell command-page-shell">
@@ -418,6 +455,87 @@ function App() {
                 <span>Blocked</span>
                 <strong>{blockedProjects}</strong>
               </div>
+              <div>
+                <span>Needs Action</span>
+                <strong>{needsActionProjects}</strong>
+              </div>
+            </div>
+
+            <div className="command-board">
+              <section className="movement-panel" aria-label="Project movement board">
+                <div className="panel-heading">
+                  <Gauge size={20} />
+                  <div>
+                    <h2>Movement Board</h2>
+                    <p>Project status grouped by operating phase.</p>
+                  </div>
+                </div>
+                <div className="movement-grid">
+                  <div>
+                    <span>Active</span>
+                    <strong>{activeProjects}</strong>
+                    <small>Moving now</small>
+                  </div>
+                  <div>
+                    <span>Waiting</span>
+                    <strong>{waitingProjects}</strong>
+                    <small>Needs outside input</small>
+                  </div>
+                  <div>
+                    <span>Blocked</span>
+                    <strong>{blockedProjects}</strong>
+                    <small>Requires decision</small>
+                  </div>
+                </div>
+              </section>
+
+              <section className="action-panel" aria-label="Action queue">
+                <div className="panel-heading">
+                  <Zap size={20} />
+                  <div>
+                    <h2>Action Queue</h2>
+                    <p>Projects that need a reply, decision, or unblock.</p>
+                  </div>
+                </div>
+                <div className="action-list">
+                  {actionQueueProjects.length === 0 ? (
+                    <p className="panel-note">No waiting or blocked projects right now.</p>
+                  ) : (
+                    actionQueueProjects.slice(0, 4).map((project) => (
+                      <article className="action-row" key={project.id}>
+                        <div>
+                          <strong>{project.project_name}</strong>
+                          <span>{project.blocker || project.next_action || 'Needs updated next action.'}</span>
+                        </div>
+                        <button type="button" onClick={() => requestProjectUpdate(project)}>
+                          Request Update
+                        </button>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <div className="project-toolbar" aria-label="Project filters">
+              <div>
+                <Filter size={17} />
+                <strong>Projects</strong>
+              </div>
+              <div className="filter-tabs" role="tablist" aria-label="Filter project status">
+                {projectFilters.map((filter) => (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={projectFilter === filter}
+                    className={projectFilter === filter ? 'active' : ''}
+                    key={filter}
+                    onClick={() => setProjectFilter(filter)}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {projectStatusMessage && (
@@ -428,7 +546,7 @@ function App() {
             )}
 
             <div className="project-grid">
-              {projectStatuses.length === 0 ? (
+              {filteredProjects.length === 0 ? (
                 <article className="empty-project-state">
                   <Radio size={22} />
                   <div>
@@ -440,7 +558,7 @@ function App() {
                   </div>
                 </article>
               ) : (
-                projectStatuses.map((project) => (
+                filteredProjects.map((project) => (
                   <article className="project-card" key={project.id}>
                     <div className="project-card-top">
                       <div>
@@ -480,6 +598,9 @@ function App() {
                       <Clock3 size={15} />
                       <span>Synced {new Date(project.updated_at).toLocaleString()}</span>
                     </div>
+                    <button type="button" className="project-update-button" onClick={() => requestProjectUpdate(project)}>
+                      Request Update <ArrowRight size={16} />
+                    </button>
                   </article>
                 ))
               )}

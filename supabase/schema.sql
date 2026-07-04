@@ -271,3 +271,155 @@ where not exists (
   from public.project_session_status
   where project_name = 'Live Session Status Sync'
 );
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action
+)
+select
+  'Power Outreach Command Board',
+  'AM Premier Solutions',
+  'active',
+  'green',
+  'txinjurycheck.com dashboard',
+  'Elara',
+  'Reference dashboard is live with outreach totals, movement board, action queue, and downloads.',
+  'Rebuild the pattern inside AM Premier Connect with project navigation and update requests.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'Power Outreach Command Board'
+);
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action
+)
+select
+  'EV/DC Charger Outreach Engine',
+  'AM Premier Solutions',
+  'active',
+  'green',
+  'workspace outreach batches',
+  'Elara',
+  'Multiple EV/DC charger outreach batches were prepared and logged across airport, retail, hospitality, parking, and fuel/convenience lanes.',
+  'Watch replies, update CRM status, and surface warm responses in the portal action queue.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'EV/DC Charger Outreach Engine'
+);
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action
+)
+select
+  'Generator and Critical Power Outreach',
+  'AM Premier Solutions',
+  'active',
+  'green',
+  'power outreach workspace',
+  'Elara',
+  'Generator backup power and critical infrastructure outreach packages were created for aviation, healthcare, water, university, rail, ports, and related lanes.',
+  'Monitor inbox replies and move qualified opportunities into deal-room follow-up.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'Generator and Critical Power Outreach'
+);
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action,
+  blocker
+)
+select
+  'Roofing Lead Pipeline',
+  'Internal sales development',
+  'waiting',
+  'yellow',
+  'roofing subagents',
+  'Elara',
+  'Operating rules were captured for a 1,000-company roofing lead database, with subagents assigned for research, verification, personalization, and outreach.',
+  'Restart or replace the failed research/verification subagent path before production outreach.',
+  'Prior subagent runs failed before producing the approved qualified lead database.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'Roofing Lead Pipeline'
+);
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action
+)
+select
+  'Respectfully GFY Launch',
+  'GFY LLC',
+  'waiting',
+  'yellow',
+  'GFY launch workspace',
+  'Elara',
+  'Brand direction, launch assets, waitlist site, mockups, pricing, product listings, and readiness materials were prepared.',
+  'Pick the next launch gate: storefront provider, first drop assets, or waitlist conversion flow.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'Respectfully GFY Launch'
+);
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action
+)
+select
+  'Power Intelligence Reports',
+  'AM Premier Solutions',
+  'active',
+  'green',
+  'reports workspace',
+  'Elara',
+  'Power infrastructure opportunity reports, government scans, commercial qualification reviews, and executive opportunity intelligence files were produced.',
+  'Promote the strongest opportunities into tracked project cards with owners and next actions.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'Power Intelligence Reports'
+);
