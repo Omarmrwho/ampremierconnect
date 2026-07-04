@@ -156,6 +156,7 @@ function App() {
   const [projectStatuses, setProjectStatuses] = useState<ProjectSessionStatus[]>([])
   const [projectStatusMessage, setProjectStatusMessage] = useState('')
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
+  const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
 
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
@@ -170,6 +171,8 @@ function App() {
   const actionQueueProjects = [...projectStatuses]
     .filter((project) => project.status === 'waiting' || project.status === 'blocked' || Boolean(project.blocker))
     .sort((left, right) => getActionPriority(right).score - getActionPriority(left).score)
+  const selectedActionProject =
+    projectStatuses.find((project) => project.id === selectedActionProjectId) || actionQueueProjects[0] || null
 
   const roleMessage = useMemo(() => {
     if (selectedRole === 'Vendor') {
@@ -566,15 +569,22 @@ function App() {
                       const priority = getActionPriority(project)
 
                       return (
-                      <article className="action-row" key={project.id}>
-                        <div className="action-main">
+                      <article
+                        className={`action-row ${selectedActionProjectId === project.id ? 'selected' : ''}`}
+                        key={project.id}
+                      >
+                        <button
+                          type="button"
+                          className="action-main action-open-button"
+                          onClick={() => setSelectedActionProjectId(project.id)}
+                        >
                           <div className="action-title-row">
                             <strong>{project.project_name}</strong>
                             <span className={`action-priority ${priority.tone}`}>{priority.label}</span>
                           </div>
                           <span>{getActionReason(project)}</span>
                           <small>{project.client_name || 'Internal'} · {project.owner || 'Unassigned'}</small>
-                        </div>
+                        </button>
                         <div className="action-controls">
                           <button type="button" onClick={() => requestProjectUpdate(project)}>
                             Request Update
@@ -593,6 +603,57 @@ function App() {
                 </div>
               </section>
             </div>
+
+            {selectedActionProject && (
+              <section className="decision-drawer" aria-label="Decision detail">
+                <div className="panel-heading">
+                  <CircleAlert size={20} />
+                  <div>
+                    <h2>Decision Detail</h2>
+                    <p>Choose how this project should move next.</p>
+                  </div>
+                </div>
+                <div className="decision-layout">
+                  <div>
+                    <span className="decision-label">Project</span>
+                    <h3>{selectedActionProject.project_name}</h3>
+                    <p>{getActionReason(selectedActionProject)}</p>
+                  </div>
+                  <dl className="decision-facts">
+                    <div>
+                      <dt>Current status</dt>
+                      <dd>{selectedActionProject.status}</dd>
+                    </div>
+                    <div>
+                      <dt>Owner</dt>
+                      <dd>{selectedActionProject.owner || 'Unassigned'}</dd>
+                    </div>
+                    <div>
+                      <dt>Last update</dt>
+                      <dd>{selectedActionProject.last_update || 'No update captured'}</dd>
+                    </div>
+                    <div>
+                      <dt>Recommended move</dt>
+                      <dd>{selectedActionProject.next_action || 'Request a fresh update before deciding.'}</dd>
+                    </div>
+                  </dl>
+                </div>
+                <div className="decision-actions">
+                  <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'active')}>
+                    Approve / Move Active
+                  </button>
+                  <button type="button" onClick={() => requestProjectUpdate(selectedActionProject)}>
+                    Ask Elara for Update
+                  </button>
+                  <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'waiting')}>
+                    Keep Waiting
+                  </button>
+                  <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'complete')}>
+                    Mark Done
+                  </button>
+                </div>
+              </section>
+            )}
 
             <div className="project-toolbar" aria-label="Project filters">
               <div>
