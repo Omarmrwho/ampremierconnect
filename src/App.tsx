@@ -300,8 +300,8 @@ function App() {
           </span>
         </a>
         <div className="nav-actions">
-          <a href="#intake">Intake</a>
-          <a href="#access">Access</a>
+          <a href="#access">Request Portal Approval</a>
+          <a href="#intake">Start Intake</a>
           {session ? (
             <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
               <LogOut size={18} />
@@ -323,11 +323,14 @@ function App() {
             deal-room execution.
           </p>
           <div className="hero-actions">
-            <a className="primary-action" href="#login">
-              Portal login <ArrowRight size={18} />
+            <a className="primary-action" href="#access">
+              Request Portal Approval <ArrowRight size={18} />
             </a>
             <a className="secondary-action" href="#intake">
-              Start intake <FileText size={18} />
+              Start Intake <FileText size={18} />
+            </a>
+            <a className="secondary-action" href="#login">
+              Portal Login <LockKeyhole size={18} />
             </a>
           </div>
         </div>
