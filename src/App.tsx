@@ -219,6 +219,7 @@ function App() {
       email: authEmail,
       password: authPassword,
       options: {
+        emailRedirectTo: window.location.origin,
         data: {
           full_name: authName,
           requested_role: roleValues[selectedRole],
