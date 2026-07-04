@@ -6,6 +6,7 @@ import {
   CircleCheck,
   ClipboardCheck,
   Clock3,
+  ExternalLink,
   Filter,
   FileText,
   Gauge,
@@ -14,19 +15,21 @@ import {
   MailCheck,
   MessageCircle,
   Radio,
-  Send,
   ShieldCheck,
   UserRound,
   UsersRound,
   Zap,
 } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const roles = ['Client', 'Vendor', 'Internal'] as const
+const openClawWebUrl =
+  import.meta.env.VITE_OPENCLAW_WEB_URL || 'https://diffs-maintains-eternal-mathematics.trycloudflare.com/'
+
 const roleValues = {
   Client: 'client',
   Vendor: 'vendor',
@@ -49,13 +52,6 @@ type AccessRequest = {
   requested_role: PortalRole
   company: string | null
   status: string
-  created_at: string
-}
-
-type SiteChatMessage = {
-  id: string
-  request_type: string
-  summary: string
   created_at: string
 }
 
@@ -354,9 +350,6 @@ function App() {
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
   const [customDecision, setCustomDecision] = useState('')
-  const [chatMessages, setChatMessages] = useState<SiteChatMessage[]>([])
-  const [chatDraft, setChatDraft] = useState('')
-  const [chatStatus, setChatStatus] = useState('')
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
 
   const isInternal = profile?.role === 'internal'
@@ -511,36 +504,6 @@ function App() {
     setProjectStatusMessage('')
   }
 
-  const loadChatMessages = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase || !session?.user) {
-      return
-    }
-
-    setChatStatus('Loading chat...')
-    const { data, error } = await supabase
-      .from('intake_requests')
-      .select('id,request_type,summary,created_at')
-      .eq('requester_id', session.user.id)
-      .in('request_type', ['site_chat_message', 'site_chat_reply'])
-      .order('created_at', { ascending: true })
-
-    if (error) {
-      setChatStatus('Chat could not load. Confirm intake policies are active.')
-      return
-    }
-
-    setChatMessages(data ?? [])
-    setChatStatus('')
-  }, [session?.user])
-
-  useEffect(() => {
-    if (session?.user) {
-      loadChatMessages()
-    } else {
-      setChatMessages([])
-    }
-  }, [loadChatMessages, session])
-
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setAccessStatus('Saving access request...')
@@ -675,75 +638,6 @@ function App() {
     setProjectStatusMessage(
       error ? 'Update request could not be logged. Check intake policies.' : `Update requested for ${project.project_name}.`,
     )
-  }
-
-  const sendChatMessage = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const message = chatDraft.trim()
-
-    if (!message) {
-      return
-    }
-
-    setChatStatus('Sending message...')
-
-    if (!isSupabaseConfigured || !supabase || !session?.user) {
-      const now = new Date().toISOString()
-      setChatMessages((messages) => [
-        ...messages,
-        { id: `local-${now}`, request_type: 'site_chat_message', summary: message, created_at: now },
-      ])
-      setChatDraft('')
-      setChatStatus('Message staged locally. Sign in with Supabase enabled to save it.')
-      return
-    }
-
-    const {
-      data: { session: currentSession },
-    } = await supabase.auth.getSession()
-
-    const accessToken = currentSession?.access_token
-    if (!accessToken) {
-      setChatStatus('Portal session expired. Sign in again to send.')
-      return
-    }
-
-    try {
-      const response = await fetch('/api/site-chat', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          company: profile?.company || 'AM Premier Connect',
-          message,
-        }),
-      })
-
-      const payload = (await response.json().catch(() => null)) as {
-        bridgeStatus?: 'connected' | 'not_configured' | 'failed'
-        error?: string
-        messages?: SiteChatMessage[]
-      } | null
-
-      if (!response.ok) {
-        setChatStatus(payload?.error || 'Message could not be sent.')
-        return
-      }
-
-      setChatDraft('')
-      setChatMessages(payload?.messages ?? [])
-      setChatStatus(
-        payload?.bridgeStatus === 'connected'
-          ? 'Message sent.'
-          : payload?.bridgeStatus === 'failed'
-            ? 'Message saved. Elara bridge did not answer yet.'
-            : 'Message saved. Elara bridge is waiting for configuration.',
-      )
-    } catch {
-      setChatStatus('Message could not reach the site chat bridge.')
-    }
   }
 
   const updateProjectOperatingStatus = async (project: ProjectSessionStatus, status: ProjectOperatingStatus) => {
@@ -1259,58 +1153,32 @@ function App() {
           </div>
         </nav>
 
-        <section className="chat-shell" aria-label="Elara site chat">
+        <section className="chat-shell" aria-label="OpenClaw workspace access">
           <div className="chat-header">
             <div className="panel-heading">
               <MessageCircle size={21} />
               <div>
                 <p className="eyebrow">Elara</p>
-                <h1>AM Premier site chat</h1>
+                <h1>OpenClaw workspace chat</h1>
               </div>
             </div>
-            <span>{session ? session.user.email : 'Sign in required'}</span>
+            <span>{session ? session.user.email : 'Portal sign-in required'}</span>
           </div>
 
           {session ? (
-            <>
-              <div className="chat-thread" aria-live="polite">
-                {chatMessages.length === 0 ? (
-                  <article className="chat-empty">
-                    <MessageCircle size={22} />
-                    <h2>Start the thread here.</h2>
-                    <p>Messages stay with this portal account.</p>
-                  </article>
-                ) : (
-                  chatMessages.map((message) => {
-                    const isUserMessage = message.request_type === 'site_chat_message'
-
-                    return (
-                      <article className={`chat-bubble ${isUserMessage ? 'user' : 'assistant'}`} key={message.id}>
-                        <span>{isUserMessage ? 'Omar' : 'Elara'}</span>
-                        <p>{message.summary}</p>
-                        <small>{new Date(message.created_at).toLocaleString()}</small>
-                      </article>
-                    )
-                  })
-                )}
-              </div>
-
-              <form className="chat-composer" onSubmit={sendChatMessage}>
-                <textarea
-                  aria-label="Message Elara"
-                  onChange={(event) => {
-                    setChatDraft(event.target.value)
-                    setChatStatus('')
-                  }}
-                  placeholder="Message Elara from the AM Premier portal..."
-                  required
-                  value={chatDraft}
-                />
-                <button type="submit">
-                  Send <Send size={17} />
-                </button>
-              </form>
-            </>
+            <div className="chat-thread" aria-live="polite">
+              <article className="chat-empty">
+                <MessageCircle size={22} />
+                <h2>Open the real Elara session.</h2>
+                <p>
+                  This opens the active OpenClaw workspace, main chat, memory, tools, and control surface through the
+                  secure web access gate.
+                </p>
+                <a className="full-button" href={openClawWebUrl} rel="noreferrer" target="_blank">
+                  Open Elara Workspace <ExternalLink size={18} />
+                </a>
+              </article>
+            </div>
           ) : (
             <section className="locked-command-state">
               <div className="login-panel">
@@ -1326,13 +1194,6 @@ function App() {
                 </button>
               </div>
             </section>
-          )}
-
-          {chatStatus && (
-            <div className="success-note" role="status">
-              <ShieldCheck size={18} />
-              <span>{chatStatus}</span>
-            </div>
           )}
         </section>
       </main>
@@ -1353,7 +1214,7 @@ function App() {
           <a href="#access">Request Portal Approval</a>
           <a href="#intake">Start Intake</a>
           <button type="button" onClick={() => navigateTo('/chat')}>
-            Site Chat
+            Elara Workspace
           </button>
           {session ? (
             <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
@@ -1407,7 +1268,7 @@ function App() {
                 </button>
               )}
               <button type="button" className="full-button" onClick={() => navigateTo('/chat')}>
-                Open Site Chat <MessageCircle size={18} />
+                Open Elara Workspace <MessageCircle size={18} />
               </button>
               <button type="button" className="full-button" onClick={handleSignOut}>
                 Sign out <LogOut size={18} />
