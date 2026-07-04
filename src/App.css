@@ -37,6 +37,12 @@
   text-decoration: none;
 }
 
+.brand-button {
+  padding: 0;
+  text-align: left;
+  background: transparent;
+}
+
 .brand-mark {
   display: grid;
   place-items: center;
@@ -72,13 +78,22 @@
   white-space: nowrap;
 }
 
+.nav-link-button {
+  padding: 0;
+  color: #2c3a40;
+  background: transparent;
+  font-weight: 700;
+}
+
 .nav-actions .icon-button {
   color: #ffffff;
 }
 
 button,
 a.primary-action,
-a.secondary-action {
+a.secondary-action,
+.brand-button,
+.nav-link-button {
   border: 0;
   font: inherit;
   cursor: pointer;
@@ -391,6 +406,38 @@ textarea {
 
 .command-section {
   background: #eef3f1;
+}
+
+.command-page-shell {
+  background: #eef3f1;
+}
+
+.command-page {
+  min-height: calc(100vh - 72px);
+}
+
+.command-page .section-heading h1 {
+  max-width: 920px;
+  margin-bottom: 14px;
+  font-size: clamp(38px, 5vw, 64px);
+  line-height: 1;
+}
+
+.locked-command-state {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 72px);
+  padding: clamp(36px, 6vw, 76px) clamp(20px, 5vw, 64px);
+}
+
+.locked-command-state .login-panel {
+  width: min(100%, 520px);
+}
+
+.locked-command-state h1 {
+  margin-bottom: 4px;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.04;
 }
 
 .command-heading {

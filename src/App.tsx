@@ -99,6 +99,7 @@ const readinessItems = [
 ]
 
 function App() {
+  const [routePath, setRoutePath] = useState(() => window.location.pathname)
   const [selectedRole, setSelectedRole] = useState<(typeof roles)[number]>('Client')
   const [accessEmail, setAccessEmail] = useState('')
   const [accessCompany, setAccessCompany] = useState('')
@@ -118,6 +119,7 @@ function App() {
   const [projectStatusMessage, setProjectStatusMessage] = useState('')
 
   const isInternal = profile?.role === 'internal'
+  const isCommandRoute = routePath === '/command'
   const activeProjects = projectStatuses.filter((project) => project.status === 'active').length
   const blockedProjects = projectStatuses.filter((project) => project.status === 'blocked').length
   const waitingProjects = projectStatuses.filter((project) => project.status === 'waiting').length
@@ -133,6 +135,15 @@ function App() {
 
     return 'Client accounts open requests, project status, deliverables, and decision logs after approval.'
   }, [selectedRole])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoutePath(window.location.pathname)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -186,11 +197,14 @@ function App() {
     if (isInternal) {
       loadAccessRequests()
       loadProjectStatuses()
-      window.setTimeout(() => {
-        document.getElementById('command-portal')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 250)
     }
   }, [isInternal])
+
+  const navigateTo = (path: string) => {
+    window.history.pushState({}, '', path)
+    setRoutePath(path)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const loadAccessRequests = async () => {
     if (!isSupabaseConfigured || !supabase) {
@@ -299,6 +313,9 @@ function App() {
     }
     setSession(null)
     setProfile(null)
+    if (isCommandRoute) {
+      navigateTo('/')
+    }
   }
 
   const handleIntakeSave = async (event: FormEvent<HTMLFormElement>) => {
@@ -343,6 +360,155 @@ function App() {
 
     setAdminStatus(`Request ${status} for ${request.email}.`)
     await loadAccessRequests()
+  }
+
+  if (isCommandRoute) {
+    return (
+      <main className="portal-shell command-page-shell">
+        <nav className="topbar" aria-label="Command portal navigation">
+          <button
+            type="button"
+            className="brand brand-button"
+            aria-label="Return to AM Premier Connect home"
+            onClick={() => navigateTo('/')}
+          >
+            <span className="brand-mark">AP</span>
+            <span>
+              <strong>AM Premier Connect</strong>
+              <small>Internal command portal</small>
+            </span>
+          </button>
+          <div className="nav-actions">
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/')}>
+              Home
+            </button>
+            {session && (
+              <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
+        </nav>
+
+        {isInternal ? (
+          <section className="command-section command-page">
+            <div className="section-heading command-heading">
+              <div>
+                <p className="eyebrow">Internal command portal</p>
+                <h1>Live project status pulled from operating sessions.</h1>
+                <p className="hero-text">
+                  Internal workspace for project health, next actions, blockers, and active session status.
+                </p>
+              </div>
+              <button type="button" className="refresh-button" onClick={loadProjectStatuses}>
+                Refresh <Radio size={17} />
+              </button>
+            </div>
+
+            <div className="command-metrics" aria-label="Project status summary">
+              <div>
+                <span>Active</span>
+                <strong>{activeProjects}</strong>
+              </div>
+              <div>
+                <span>Waiting</span>
+                <strong>{waitingProjects}</strong>
+              </div>
+              <div>
+                <span>Blocked</span>
+                <strong>{blockedProjects}</strong>
+              </div>
+            </div>
+
+            {projectStatusMessage && (
+              <div className="success-note" role="status">
+                <ShieldCheck size={18} />
+                <span>{projectStatusMessage}</span>
+              </div>
+            )}
+
+            <div className="project-grid">
+              {projectStatuses.length === 0 ? (
+                <article className="empty-project-state">
+                  <Radio size={22} />
+                  <div>
+                    <h3>No live project records yet.</h3>
+                    <p>
+                      The portal shell is ready. Next we connect the OpenClaw session sync so active work sessions
+                      write project status records here.
+                    </p>
+                  </div>
+                </article>
+              ) : (
+                projectStatuses.map((project) => (
+                  <article className="project-card" key={project.id}>
+                    <div className="project-card-top">
+                      <div>
+                        <h3>{project.project_name}</h3>
+                        <p>{project.client_name || 'Internal project'}</p>
+                      </div>
+                      <span className={`health-pill ${project.health}`}>
+                        {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
+                        {project.status}
+                      </span>
+                    </div>
+                    <dl className="project-fields">
+                      <div>
+                        <dt>Owner</dt>
+                        <dd>{project.owner || 'Unassigned'}</dd>
+                      </div>
+                      <div>
+                        <dt>Session</dt>
+                        <dd>{project.source_session_label || project.source_session_key || 'Manual status'}</dd>
+                      </div>
+                      <div>
+                        <dt>Last update</dt>
+                        <dd>{project.last_update || 'No update captured'}</dd>
+                      </div>
+                      <div>
+                        <dt>Next action</dt>
+                        <dd>{project.next_action || 'Needs next action'}</dd>
+                      </div>
+                      {project.blocker && (
+                        <div>
+                          <dt>Blocker</dt>
+                          <dd>{project.blocker}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <div className="project-updated">
+                      <Clock3 size={15} />
+                      <span>Synced {new Date(project.updated_at).toLocaleString()}</span>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="locked-command-state">
+            <div className="login-panel">
+              <div className="panel-heading">
+                <LockKeyhole size={20} />
+                <div>
+                  <h1>Internal command portal</h1>
+                  <p>Sign in with an approved internal account to open this workspace.</p>
+                </div>
+              </div>
+              <button type="button" className="full-button" onClick={() => navigateTo('/')}>
+                Return to portal login <ArrowRight size={18} />
+              </button>
+              {(profileStatus || authStatus) && (
+                <div className="success-note" role="status">
+                  <ShieldCheck size={18} />
+                  <span>{profileStatus || authStatus}</span>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+      </main>
+    )
   }
 
   return (
@@ -405,9 +571,9 @@ function App() {
               <strong>{profile?.full_name || session.user.email}</strong>
               <span>{profile ? `${profile.role} access` : profileStatus}</span>
               {isInternal && (
-                <a className="full-button admin-link-button" href="#command-portal">
+                <button type="button" className="full-button admin-link-button" onClick={() => navigateTo('/command')}>
                   Open Command Portal <Radio size={18} />
-                </a>
+                </button>
               )}
               <button type="button" className="full-button" onClick={handleSignOut}>
                 Sign out <LogOut size={18} />
@@ -624,100 +790,6 @@ function App() {
           )}
         </div>
       </section>
-
-      {isInternal && (
-        <section className="command-section" id="command-portal">
-          <div className="section-heading command-heading">
-            <div>
-              <p className="eyebrow">Internal command portal</p>
-              <h2>Live project status pulled from operating sessions.</h2>
-            </div>
-            <button type="button" className="refresh-button" onClick={loadProjectStatuses}>
-              Refresh <Radio size={17} />
-            </button>
-          </div>
-
-          <div className="command-metrics" aria-label="Project status summary">
-            <div>
-              <span>Active</span>
-              <strong>{activeProjects}</strong>
-            </div>
-            <div>
-              <span>Waiting</span>
-              <strong>{waitingProjects}</strong>
-            </div>
-            <div>
-              <span>Blocked</span>
-              <strong>{blockedProjects}</strong>
-            </div>
-          </div>
-
-          {projectStatusMessage && (
-            <div className="success-note" role="status">
-              <ShieldCheck size={18} />
-              <span>{projectStatusMessage}</span>
-            </div>
-          )}
-
-          <div className="project-grid">
-            {projectStatuses.length === 0 ? (
-              <article className="empty-project-state">
-                <Radio size={22} />
-                <div>
-                  <h3>No live project records yet.</h3>
-                  <p>
-                    The portal shell is ready. Next we connect the OpenClaw session sync so active work sessions
-                    write project status records here.
-                  </p>
-                </div>
-              </article>
-            ) : (
-              projectStatuses.map((project) => (
-                <article className="project-card" key={project.id}>
-                  <div className="project-card-top">
-                    <div>
-                      <h3>{project.project_name}</h3>
-                      <p>{project.client_name || 'Internal project'}</p>
-                    </div>
-                    <span className={`health-pill ${project.health}`}>
-                      {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
-                      {project.status}
-                    </span>
-                  </div>
-                  <dl className="project-fields">
-                    <div>
-                      <dt>Owner</dt>
-                      <dd>{project.owner || 'Unassigned'}</dd>
-                    </div>
-                    <div>
-                      <dt>Session</dt>
-                      <dd>{project.source_session_label || project.source_session_key || 'Manual status'}</dd>
-                    </div>
-                    <div>
-                      <dt>Last update</dt>
-                      <dd>{project.last_update || 'No update captured'}</dd>
-                    </div>
-                    <div>
-                      <dt>Next action</dt>
-                      <dd>{project.next_action || 'Needs next action'}</dd>
-                    </div>
-                    {project.blocker && (
-                      <div>
-                        <dt>Blocker</dt>
-                        <dd>{project.blocker}</dd>
-                      </div>
-                    )}
-                  </dl>
-                  <div className="project-updated">
-                    <Clock3 size={15} />
-                    <span>Synced {new Date(project.updated_at).toLocaleString()}</span>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
-      )}
 
       <section className="access-request-band" id="access">
         <div className="intake-panel">
