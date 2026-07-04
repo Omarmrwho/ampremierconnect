@@ -1044,6 +1044,50 @@ textarea {
   background: #ffe8e5;
 }
 
+.project-progress {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.project-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #65737a;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.project-progress-label strong {
+  color: #133c4f;
+  font-size: 13px;
+}
+
+.project-progress-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eeeb;
+}
+
+.project-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #147a5c;
+}
+
+.project-progress.yellow .project-progress-track span {
+  background: #b95f22;
+}
+
+.project-progress.red .project-progress-track span {
+  background: #b94141;
+}
+
 .project-fields {
   display: grid;
   gap: 12px;

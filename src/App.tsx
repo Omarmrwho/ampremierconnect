@@ -303,6 +303,26 @@ const getActionReason = (project: ProjectSessionStatus) => {
   return project.next_action || 'Needs updated next action.'
 }
 
+const getProjectProgress = (project: ProjectSessionStatus) => {
+  if (project.status === 'complete') {
+    return { value: 100, label: 'Complete' }
+  }
+
+  if (project.status === 'blocked' || project.health === 'red') {
+    return { value: 25, label: 'Blocked' }
+  }
+
+  if (project.status === 'waiting') {
+    return { value: 55, label: 'Waiting' }
+  }
+
+  if (project.health === 'yellow') {
+    return { value: 65, label: 'Needs review' }
+  }
+
+  return { value: 75, label: 'In progress' }
+}
+
 function App() {
   const [routePath, setRoutePath] = useState(() => window.location.pathname)
   const [selectedRole, setSelectedRole] = useState<(typeof roles)[number]>('Client')
@@ -1001,7 +1021,10 @@ function App() {
                   </div>
                 </article>
               ) : (
-                filteredProjects.map((project) => (
+                filteredProjects.map((project) => {
+                  const progress = getProjectProgress(project)
+
+                  return (
                   <article
                     className={`project-card ${selectedActionProjectId === project.id ? 'selected' : ''}`}
                     key={project.id}
@@ -1016,6 +1039,15 @@ function App() {
                         {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
                         {project.status}
                       </span>
+                    </div>
+                    <div className={`project-progress ${project.health}`} aria-label={`${project.project_name} progress`}>
+                      <div className="project-progress-label">
+                        <span>{progress.label}</span>
+                        <strong>{progress.value}%</strong>
+                      </div>
+                      <div className="project-progress-track">
+                        <span style={{ width: `${progress.value}%` }} />
+                      </div>
                     </div>
                     <dl className="project-fields">
                       <div>
@@ -1056,7 +1088,8 @@ function App() {
                       Request Update <ArrowRight size={16} />
                     </button>
                   </article>
-                ))
+                  )
+                })
               )}
             </div>
           </section>
