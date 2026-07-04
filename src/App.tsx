@@ -432,7 +432,7 @@ function App() {
         ))}
       </section>
 
-      <section className="access-section" id="access">
+      <section className="access-section" id="access-lanes">
         <div className="section-heading">
           <p className="eyebrow">Access lanes</p>
           <h2>Approval gates now sit in front of AM Premier portal access.</h2>
@@ -564,7 +564,7 @@ function App() {
         </div>
       </section>
 
-      <section className="access-request-band">
+      <section className="access-request-band" id="access">
         <div className="intake-panel">
           <div className="panel-heading">
             <MailCheck size={20} />
