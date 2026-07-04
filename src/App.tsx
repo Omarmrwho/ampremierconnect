@@ -109,9 +109,146 @@ const projectStats: Record<
   {
     summary: string
     metrics: { label: string; value: string; note: string }[]
+    lanes: { name: string; value: string; note: string }[]
     highlights: string[]
   }
 > = {
+  'AM Premier Connect Portal': {
+    summary: 'Client/vendor/internal portal foundation with Supabase auth, approval flow, and command route live.',
+    metrics: [
+      { label: 'Portal Roles', value: '3', note: 'Client, vendor, and internal access lanes' },
+      { label: 'Live Routes', value: '2', note: 'Homepage portal plus /command workspace' },
+      { label: 'Core Tables', value: '3', note: 'Profiles, access requests, and project status' },
+      { label: 'Deploy Path', value: '1', note: 'GitHub to Vercel production flow' },
+    ],
+    lanes: [
+      { name: 'Access control', value: 'Live', note: 'Approval-gated account flow is connected to Supabase.' },
+      { name: 'Command portal', value: 'Live', note: 'Internal-only route with action queue and project details.' },
+      { name: 'Project records', value: '8', note: 'Seeded operating projects visible in the board.' },
+    ],
+    highlights: [
+      'Homepage no longer scrolls into internal operations; /command is a separate route.',
+      'Internal users can refresh project statuses, request updates, and record decisions.',
+      'Next upgrade is turning update requests into real OpenClaw tasks instead of status text only.',
+    ],
+  },
+  'Live Session Status Sync': {
+    summary: 'Bridge concept for turning OpenClaw work sessions into portal project records and current status.',
+    metrics: [
+      { label: 'Visible Source', value: '1', note: 'OpenClaw session runtime available to Elara' },
+      { label: 'Portal Table', value: '1', note: 'project_session_status is the target record table' },
+      { label: 'Sync Mode', value: 'Manual', note: 'Direct scheduled sync is not built yet' },
+      { label: 'Risk Level', value: 'Med', note: 'Browser cannot call agent session tools directly' },
+    ],
+    lanes: [
+      { name: 'Manual updates', value: 'Active', note: 'Elara can update Supabase project rows directly.' },
+      { name: 'Scheduled bridge', value: 'Needed', note: 'Cron or server process should summarize sessions into records.' },
+      { name: 'Browser access', value: 'Blocked', note: 'Frontend should not hold OpenClaw or service-role powers.' },
+    ],
+    highlights: [
+      'The portal has the destination table and UI already.',
+      'The missing piece is a server-side/session-side writer that turns active work into status deltas.',
+      'Best next step: build a small sync script or cron that upserts project summaries.',
+    ],
+  },
+  'Power Outreach Command Board': {
+    summary: 'Reference outreach dashboard pattern from TX Injury Check: campaign metrics, movement board, action queue, and request logging.',
+    metrics: [
+      { label: 'Total Sent', value: '211', note: 'Direct sends logged in the reference dashboard' },
+      { label: 'EV/DC Lane', value: '155', note: 'Site-host outreach sends in the dashboard' },
+      { label: 'Generator Lane', value: '56', note: 'Critical power outreach sends in the dashboard' },
+      { label: 'Campaigns', value: '18', note: 'Campaign cards listed across both lanes' },
+    ],
+    lanes: [
+      { name: 'EV/DC Fast Charger', value: '7', note: 'Airports, hospitality, retail, parking, fuel, commercial, and general hosts.' },
+      { name: 'Generator / Critical Power', value: '11', note: 'University, aviation, K12, utility, ports, water, healthcare, rail, and more.' },
+      { name: 'Movement phase', value: 'Reply watch', note: 'Sent and waiting until inbox reply data is entered.' },
+    ],
+    highlights: [
+      'This is the pattern now being rebuilt inside AM Premier Connect.',
+      'The better portal version adds project click-through details and decision commands.',
+      'Next useful improvement is connecting reply/bounce data instead of only sent counts.',
+    ],
+  },
+  'EV/DC Charger Outreach Engine': {
+    summary: 'EV/DC charger outreach engine covering airports, hospitality, retail, parking, fuel, commercial properties, and site hosts.',
+    metrics: [
+      { label: 'Campaign Folders', value: '33', note: 'EV/DC outreach folders in the workspace' },
+      { label: 'Target Rows', value: '171', note: 'CRM target rows found across EV batch files' },
+      { label: 'Primary Lanes', value: '7', note: 'Airport/FBO, hospitality, retail, parking, fuel, commercial, general hosts' },
+      { label: 'Reply Status', value: 'Watch', note: 'Needs inbox/reply review before warm-opportunity count is real' },
+    ],
+    lanes: [
+      { name: 'Airports / FBOs', value: '19+', note: 'Largest batch family, focused on travel and aviation site hosts.' },
+      { name: 'Hospitality', value: '6+', note: 'Hotel and travel-property batches prepared.' },
+      { name: 'Retail / parking / fuel', value: '6+', note: 'Retail properties, parking operators, and convenience/fuel sites.' },
+      { name: 'Commercial / site host', value: '2+', note: 'General site-host and commercial-property lanes.' },
+    ],
+    highlights: [
+      'The engine is built around property-owner/site-host qualification, not random EV leads.',
+      'Best next move is reply triage: warm, maybe, bounced, not a fit, and follow-up needed.',
+      'Portal should eventually show sent, opened/replied if available, follow-up due, and opportunity value by lane.',
+    ],
+  },
+  'Generator and Critical Power Outreach': {
+    summary: 'Critical power outreach lanes for generator, backup power, and infrastructure buyers.',
+    metrics: [
+      { label: 'Campaign Lanes', value: '12', note: 'Generator/critical-power outreach folders found' },
+      { label: 'Target Rows', value: '152', note: 'CRM target rows across generator batch files' },
+      { label: 'Approval Packs', value: '12', note: 'Lane packets prepared for review and execution' },
+      { label: 'Reply Status', value: 'Watch', note: 'Needs inbox review to separate warm replies from silence' },
+    ],
+    lanes: [
+      { name: 'Infrastructure', value: '5', note: 'Water, ports, rail, utilities, and county facilities.' },
+      { name: 'Facilities', value: '4', note: 'Healthcare, K12, university, and cold chain.' },
+      { name: 'Aviation / mission critical', value: '2', note: 'Aviation and mission-critical power lanes.' },
+      { name: 'Channel / backup power', value: '1+', note: 'Generator partner and backup-power paths.' },
+    ],
+    highlights: [
+      'The strongest use case is urgent reliability: downtime risk, backup power gaps, and resilience planning.',
+      'Portal should split this into lane cards so Omar can see which vertical is moving.',
+      'Next action is reply and bounce classification, then qualified follow-up packages.',
+    ],
+  },
+  'Roofing Lead Pipeline': {
+    summary: 'Roofing lead pipeline with discovery, repair, QA, and outreach-ready files staged but not fully production-cleared.',
+    metrics: [
+      { label: 'Pipeline Files', value: '29', note: 'Discovery, QA, repair, activation, and campaign files' },
+      { label: 'Core Lists', value: '4', note: 'Raw, rejected, repaired, and outreach-ready lead files' },
+      { label: 'QA Reports', value: '5', note: 'Manual, sample, repaired, full audit, and report outputs' },
+      { label: 'Status', value: 'Blocked', note: 'Needs verified production path before mass outreach' },
+    ],
+    lanes: [
+      { name: 'Discovery', value: 'Built', note: 'Multi-source collection scripts and source metrics exist.' },
+      { name: 'Repair / QA', value: 'Built', note: 'Repair reports and QA artifacts are staged.' },
+      { name: 'Activation', value: 'Paused', note: 'Activation folder exists, but prior subagent path failed.' },
+    ],
+    highlights: [
+      'This should stay blocked until the lead database is verified enough for production outreach.',
+      'The decision needed is whether to repair the existing dataset or restart verification cleanly.',
+      'Useful portal stat later: qualified companies, verified emails, phone coverage, rejected count, and send-ready count.',
+    ],
+  },
+  'Respectfully GFY Launch': {
+    summary: 'Brand and launch system for Respectfully GFY, including waitlist site, product copy, mockups, and launch assets.',
+    metrics: [
+      { label: 'Project Files', value: '48', note: 'Brand, site, launch, product, and validation artifacts' },
+      { label: 'Launch Assets', value: '16', note: 'Pricing, listings, scripts, provider research, and readiness docs' },
+      { label: 'Mockup Files', value: '6', note: 'Desktop/mobile checks and storefront prototypes' },
+      { label: 'Launch Gate', value: 'Open', note: 'Needs decision on storefront, first drop, or waitlist conversion' },
+    ],
+    lanes: [
+      { name: 'Brand direction', value: 'Approved', note: 'Visual direction board and brand strategy are captured.' },
+      { name: 'Waitlist site', value: 'Built', note: 'Static waitlist site and deployment notes exist.' },
+      { name: 'First drop', value: 'Drafted', note: 'Product ladder, listings, pricing, and margin sheet are prepared.' },
+      { name: 'Storefront', value: 'Prototype', note: 'Mockup board and storefront prototype files are staged.' },
+    ],
+    highlights: [
+      'The project is not lacking ideas; it needs a launch gate decision.',
+      'Best next decision: pick storefront provider and first product drop scope.',
+      'Portal should eventually track waitlist count, conversion rate, SKU readiness, and content cadence.',
+    ],
+  },
   'Power Intelligence Reports': {
     summary: 'Latest power infrastructure scan covers AI/data center generator opportunities and commercial fit.',
     metrics: [
@@ -119,6 +256,11 @@ const projectStats: Record<
       { label: 'High Priority', value: '2', note: 'Delta Forge 1 and San Marcos Data Center I' },
       { label: 'Avg Fit Score', value: '71', note: 'Average final commercial score out of 100' },
       { label: 'Avg Confidence', value: '66', note: 'Average evidence confidence out of 100' },
+    ],
+    lanes: [
+      { name: 'Executive reports', value: '12', note: 'July power/opportunity report files found in the reports folder.' },
+      { name: 'High-fit deals', value: '2', note: 'Delta Forge 1 and San Marcos Data Center I.' },
+      { name: 'Validation work', value: '3', note: 'Medium-priority opportunities need package-owner or permit validation.' },
     ],
     highlights: [
       'Delta Forge 1: 85 final score, 96 confidence, 3 to 12 month buying window.',
@@ -724,6 +866,15 @@ function App() {
                           <span>{metric.label}</span>
                           <strong>{metric.value}</strong>
                           <small>{metric.note}</small>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="stats-lanes" aria-label="Project lane breakdown">
+                      {selectedProjectStats.lanes.map((lane) => (
+                        <div key={lane.name}>
+                          <strong>{lane.name}</strong>
+                          <span>{lane.value}</span>
+                          <small>{lane.note}</small>
                         </div>
                       ))}
                     </div>
