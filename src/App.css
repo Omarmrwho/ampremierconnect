@@ -754,6 +754,36 @@ textarea {
   background: #e4f5ea;
 }
 
+.custom-decision-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(19, 60, 79, 0.1);
+  border-radius: 8px;
+  background: #f8faf8;
+}
+
+.custom-decision-box label {
+  margin-bottom: 0;
+}
+
+.custom-decision-box textarea {
+  min-height: 84px;
+}
+
+.custom-decision-box button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #133c4f;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
 .project-toolbar {
   display: flex;
   align-items: center;
@@ -1107,6 +1137,10 @@ textarea {
 
   .decision-actions button {
     flex: 1 1 180px;
+  }
+
+  .custom-decision-box {
+    grid-template-columns: 1fr;
   }
 
   .row-actions {

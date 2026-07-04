@@ -157,6 +157,7 @@ function App() {
   const [projectStatusMessage, setProjectStatusMessage] = useState('')
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
+  const [customDecision, setCustomDecision] = useState('')
 
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
@@ -463,6 +464,42 @@ function App() {
     await loadProjectStatuses()
   }
 
+  const saveCustomDecision = async (project: ProjectSessionStatus) => {
+    const trimmedDecision = customDecision.trim()
+    if (!trimmedDecision) {
+      setProjectStatusMessage('Type a custom command before saving.')
+      return
+    }
+
+    setProjectStatusMessage(`Saving custom command for ${project.project_name}...`)
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectStatusMessage('Custom command staged. Supabase env vars are not connected yet.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('project_session_status')
+      .update({
+        status: 'waiting',
+        health: 'yellow',
+        next_action: trimmedDecision,
+        blocker: null,
+        last_update: `Custom command from Omar: ${trimmedDecision}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', project.id)
+
+    if (error) {
+      setProjectStatusMessage('Custom command could not be saved. Confirm internal update policy is active.')
+      return
+    }
+
+    setCustomDecision('')
+    setProjectStatusMessage(`Custom command saved for ${project.project_name}.`)
+    await loadProjectStatuses()
+  }
+
   if (isCommandRoute) {
     return (
       <main className="portal-shell command-page-shell">
@@ -650,6 +687,19 @@ function App() {
                   </button>
                   <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'complete')}>
                     Mark Done
+                  </button>
+                </div>
+                <div className="custom-decision-box">
+                  <label>
+                    Custom command
+                    <textarea
+                      onChange={(event) => setCustomDecision(event.target.value)}
+                      placeholder="Example: Have Elara research the storefront options and recommend one before we move GFY forward."
+                      value={customDecision}
+                    />
+                  </label>
+                  <button type="button" onClick={() => saveCustomDecision(selectedActionProject)}>
+                    Save Custom Command
                   </button>
                 </div>
               </section>
