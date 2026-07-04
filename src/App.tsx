@@ -176,6 +176,7 @@ function App() {
     const { data, error } = await supabase
       .from('access_requests')
       .select('id,email,requested_role,company,status,created_at')
+      .eq('status', 'pending')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -282,7 +283,11 @@ function App() {
     }
 
     setAdminStatus(`${status === 'approved' ? 'Approving' : 'Denying'} ${request.email}...`)
-    const { error } = await supabase.from('access_requests').update({ status }).eq('id', request.id)
+    const { error } = await supabase
+      .from('access_requests')
+      .update({ status })
+      .eq('id', request.id)
+      .eq('status', 'pending')
 
     if (error) {
       setAdminStatus('Request update failed. Confirm this account has internal role.')
@@ -513,7 +518,7 @@ function App() {
             <Zap size={20} />
             <div>
               <h2>{isInternal ? 'Admin Approval Queue' : 'Operating Queue'}</h2>
-              <p>{isInternal ? 'Approve or deny portal access requests.' : 'Admin dashboard unlocks for internal users.'}</p>
+              <p>{isInternal ? 'Approve or deny pending portal access requests.' : 'Admin dashboard unlocks for internal users.'}</p>
             </div>
           </div>
 
@@ -527,7 +532,7 @@ function App() {
                     <div>
                       <strong>{request.email}</strong>
                       <span>
-                        {request.company || 'No company'} · {request.requested_role} · {request.status}
+                        {request.company || 'No company'} · {request.requested_role} · pending
                       </span>
                     </div>
                     <div className="row-actions">

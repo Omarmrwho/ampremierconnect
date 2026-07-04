@@ -142,7 +142,7 @@ create policy "Internal admins can update access requests"
 on public.access_requests
 for update
 to authenticated
-using (public.is_internal_admin())
+using (public.is_internal_admin() and status = 'pending')
 with check (public.is_internal_admin());
 
 drop policy if exists "Anyone can create draft intake requests" on public.intake_requests;
