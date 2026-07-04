@@ -102,6 +102,39 @@ const readinessItems = [
 const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as const
 
 type ProjectFilter = (typeof projectFilters)[number]
+type ProjectOperatingStatus = ProjectSessionStatus['status']
+
+const getActionPriority = (project: ProjectSessionStatus) => {
+  if (project.status === 'blocked' || project.health === 'red') {
+    return { label: 'Critical', score: 3, tone: 'critical' }
+  }
+
+  if (project.blocker) {
+    return { label: 'Decision', score: 2, tone: 'decision' }
+  }
+
+  if (project.status === 'waiting') {
+    return { label: 'Update', score: 1, tone: 'update' }
+  }
+
+  return { label: 'Watch', score: 0, tone: 'watch' }
+}
+
+const getActionReason = (project: ProjectSessionStatus) => {
+  if (project.blocker) {
+    return project.blocker
+  }
+
+  if (project.status === 'waiting') {
+    return project.next_action || 'Waiting for outside input or owner direction.'
+  }
+
+  if (project.status === 'blocked') {
+    return project.next_action || 'Blocked project needs a decision before it can move.'
+  }
+
+  return project.next_action || 'Needs updated next action.'
+}
 
 function App() {
   const [routePath, setRoutePath] = useState(() => window.location.pathname)
@@ -134,9 +167,9 @@ function App() {
   ).length
   const filteredProjects =
     projectFilter === 'all' ? projectStatuses : projectStatuses.filter((project) => project.status === projectFilter)
-  const actionQueueProjects = projectStatuses.filter(
-    (project) => project.status === 'waiting' || project.status === 'blocked' || Boolean(project.blocker),
-  )
+  const actionQueueProjects = [...projectStatuses]
+    .filter((project) => project.status === 'waiting' || project.status === 'blocked' || Boolean(project.blocker))
+    .sort((left, right) => getActionPriority(right).score - getActionPriority(left).score)
 
   const roleMessage = useMemo(() => {
     if (selectedRole === 'Vendor') {
@@ -399,6 +432,34 @@ function App() {
     )
   }
 
+  const updateProjectOperatingStatus = async (project: ProjectSessionStatus, status: ProjectOperatingStatus) => {
+    setProjectStatusMessage(`Updating ${project.project_name} to ${status}...`)
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectStatusMessage('Project status staged. Supabase env vars are not connected yet.')
+      return
+    }
+
+    const health = status === 'blocked' ? 'red' : status === 'waiting' ? 'yellow' : 'green'
+    const { error } = await supabase
+      .from('project_session_status')
+      .update({
+        status,
+        health,
+        blocker: status === 'blocked' ? project.blocker || 'Needs owner decision.' : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', project.id)
+
+    if (error) {
+      setProjectStatusMessage('Project status could not be updated. Confirm internal update policy is active.')
+      return
+    }
+
+    setProjectStatusMessage(`${project.project_name} marked ${status}.`)
+    await loadProjectStatuses()
+  }
+
   if (isCommandRoute) {
     return (
       <main className="portal-shell command-page-shell">
@@ -501,17 +562,33 @@ function App() {
                   {actionQueueProjects.length === 0 ? (
                     <p className="panel-note">No waiting or blocked projects right now.</p>
                   ) : (
-                    actionQueueProjects.slice(0, 4).map((project) => (
+                    actionQueueProjects.slice(0, 6).map((project) => {
+                      const priority = getActionPriority(project)
+
+                      return (
                       <article className="action-row" key={project.id}>
-                        <div>
-                          <strong>{project.project_name}</strong>
-                          <span>{project.blocker || project.next_action || 'Needs updated next action.'}</span>
+                        <div className="action-main">
+                          <div className="action-title-row">
+                            <strong>{project.project_name}</strong>
+                            <span className={`action-priority ${priority.tone}`}>{priority.label}</span>
+                          </div>
+                          <span>{getActionReason(project)}</span>
+                          <small>{project.client_name || 'Internal'} · {project.owner || 'Unassigned'}</small>
                         </div>
-                        <button type="button" onClick={() => requestProjectUpdate(project)}>
-                          Request Update
-                        </button>
+                        <div className="action-controls">
+                          <button type="button" onClick={() => requestProjectUpdate(project)}>
+                            Request Update
+                          </button>
+                          <button type="button" onClick={() => updateProjectOperatingStatus(project, 'active')}>
+                            Mark Active
+                          </button>
+                          <button type="button" onClick={() => updateProjectOperatingStatus(project, 'complete')}>
+                            Done
+                          </button>
+                        </div>
                       </article>
-                    ))
+                      )
+                    })
                   )}
                 </div>
               </section>

@@ -545,16 +545,25 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: center;
+  align-items: start;
   padding: 12px;
   border: 1px solid rgba(19, 60, 79, 0.11);
   border-radius: 8px;
   background: #f8faf8;
 }
 
+.action-main,
 .action-row strong,
-.action-row span {
+.action-row span,
+.action-row small {
   display: block;
+}
+
+.action-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-row span {
@@ -563,7 +572,49 @@ textarea {
   font-size: 13px;
 }
 
-.action-row button,
+.action-row small {
+  margin-top: 7px;
+  color: #7a858a;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.action-priority {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.action-priority.critical {
+  color: #84251d;
+  background: #ffe8e5;
+}
+
+.action-priority.decision {
+  color: #7a4a14;
+  background: #fff3dc;
+}
+
+.action-priority.update,
+.action-priority.watch {
+  color: #174531;
+  background: #e4f5ea;
+}
+
+.action-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.action-controls button,
 .project-update-button {
   display: inline-flex;
   align-items: center;
@@ -577,6 +628,16 @@ textarea {
   font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.action-controls button:nth-child(2) {
+  color: #133c4f;
+  background: #eef3f1;
+}
+
+.action-controls button:nth-child(3) {
+  color: #174531;
+  background: #e4f5ea;
 }
 
 .project-toolbar {
@@ -918,6 +979,14 @@ textarea {
 
   .action-row {
     grid-template-columns: 1fr;
+  }
+
+  .action-controls {
+    justify-content: stretch;
+  }
+
+  .action-controls button {
+    flex: 1;
   }
 
   .row-actions {
