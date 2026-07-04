@@ -698,22 +698,52 @@ function App() {
       return
     }
 
-    const { error } = await supabase.from('intake_requests').insert({
-      requester_id: session.user.id,
-      request_type: 'site_chat_message',
-      company: profile?.company || 'AM Premier Connect',
-      summary: message,
-      status: 'draft',
-    })
+    const {
+      data: { session: currentSession },
+    } = await supabase.auth.getSession()
 
-    if (error) {
-      setChatStatus('Message could not be saved. Check intake policies.')
+    const accessToken = currentSession?.access_token
+    if (!accessToken) {
+      setChatStatus('Portal session expired. Sign in again to send.')
       return
     }
 
-    setChatDraft('')
-    setChatStatus('Message saved.')
-    await loadChatMessages()
+    try {
+      const response = await fetch('/api/site-chat', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company: profile?.company || 'AM Premier Connect',
+          message,
+        }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as {
+        bridgeStatus?: 'connected' | 'not_configured' | 'failed'
+        error?: string
+        messages?: SiteChatMessage[]
+      } | null
+
+      if (!response.ok) {
+        setChatStatus(payload?.error || 'Message could not be sent.')
+        return
+      }
+
+      setChatDraft('')
+      setChatMessages(payload?.messages ?? [])
+      setChatStatus(
+        payload?.bridgeStatus === 'connected'
+          ? 'Message sent.'
+          : payload?.bridgeStatus === 'failed'
+            ? 'Message saved. Elara bridge did not answer yet.'
+            : 'Message saved. Elara bridge is waiting for configuration.',
+      )
+    } catch {
+      setChatStatus('Message could not reach the site chat bridge.')
+    }
   }
 
   const updateProjectOperatingStatus = async (project: ProjectSessionStatus, status: ProjectOperatingStatus) => {
