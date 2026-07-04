@@ -2,12 +2,16 @@ import {
   ArrowRight,
   BadgeCheck,
   Building2,
+  CircleAlert,
+  CircleCheck,
   ClipboardCheck,
+  Clock3,
   FileText,
   Gauge,
   LockKeyhole,
   LogOut,
   MailCheck,
+  Radio,
   ShieldCheck,
   UserRound,
   UsersRound,
@@ -43,6 +47,21 @@ type AccessRequest = {
   company: string | null
   status: string
   created_at: string
+}
+
+type ProjectSessionStatus = {
+  id: string
+  project_name: string
+  client_name: string | null
+  status: 'active' | 'waiting' | 'blocked' | 'complete'
+  health: 'green' | 'yellow' | 'red'
+  source_session_key: string | null
+  source_session_label: string | null
+  owner: string | null
+  last_update: string | null
+  next_action: string | null
+  blocker: string | null
+  updated_at: string
 }
 
 const accessLanes = [
@@ -95,8 +114,13 @@ function App() {
   const [intakeStatus, setIntakeStatus] = useState('')
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([])
   const [adminStatus, setAdminStatus] = useState('')
+  const [projectStatuses, setProjectStatuses] = useState<ProjectSessionStatus[]>([])
+  const [projectStatusMessage, setProjectStatusMessage] = useState('')
 
   const isInternal = profile?.role === 'internal'
+  const activeProjects = projectStatuses.filter((project) => project.status === 'active').length
+  const blockedProjects = projectStatuses.filter((project) => project.status === 'blocked').length
+  const waitingProjects = projectStatuses.filter((project) => project.status === 'waiting').length
 
   const roleMessage = useMemo(() => {
     if (selectedRole === 'Vendor') {
@@ -161,8 +185,9 @@ function App() {
   useEffect(() => {
     if (isInternal) {
       loadAccessRequests()
+      loadProjectStatuses()
       window.setTimeout(() => {
-        document.getElementById('admin-approval-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        document.getElementById('command-portal')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 250)
     }
   }, [isInternal])
@@ -186,6 +211,28 @@ function App() {
 
     setAccessRequests(data ?? [])
     setAdminStatus('')
+  }
+
+  const loadProjectStatuses = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      return
+    }
+
+    setProjectStatusMessage('Loading project command portal...')
+    const { data, error } = await supabase
+      .from('project_session_status')
+      .select(
+        'id,project_name,client_name,status,health,source_session_key,source_session_label,owner,last_update,next_action,blocker,updated_at',
+      )
+      .order('updated_at', { ascending: false })
+
+    if (error) {
+      setProjectStatusMessage('Project portal could not load. Apply the latest Supabase schema update.')
+      return
+    }
+
+    setProjectStatuses(data ?? [])
+    setProjectStatusMessage('')
   }
 
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
@@ -358,8 +405,8 @@ function App() {
               <strong>{profile?.full_name || session.user.email}</strong>
               <span>{profile ? `${profile.role} access` : profileStatus}</span>
               {isInternal && (
-                <a className="full-button admin-link-button" href="#admin-approval-queue">
-                  Open Admin Approval Queue <ShieldCheck size={18} />
+                <a className="full-button admin-link-button" href="#command-portal">
+                  Open Command Portal <Radio size={18} />
                 </a>
               )}
               <button type="button" className="full-button" onClick={handleSignOut}>
@@ -577,6 +624,100 @@ function App() {
           )}
         </div>
       </section>
+
+      {isInternal && (
+        <section className="command-section" id="command-portal">
+          <div className="section-heading command-heading">
+            <div>
+              <p className="eyebrow">Internal command portal</p>
+              <h2>Live project status pulled from operating sessions.</h2>
+            </div>
+            <button type="button" className="refresh-button" onClick={loadProjectStatuses}>
+              Refresh <Radio size={17} />
+            </button>
+          </div>
+
+          <div className="command-metrics" aria-label="Project status summary">
+            <div>
+              <span>Active</span>
+              <strong>{activeProjects}</strong>
+            </div>
+            <div>
+              <span>Waiting</span>
+              <strong>{waitingProjects}</strong>
+            </div>
+            <div>
+              <span>Blocked</span>
+              <strong>{blockedProjects}</strong>
+            </div>
+          </div>
+
+          {projectStatusMessage && (
+            <div className="success-note" role="status">
+              <ShieldCheck size={18} />
+              <span>{projectStatusMessage}</span>
+            </div>
+          )}
+
+          <div className="project-grid">
+            {projectStatuses.length === 0 ? (
+              <article className="empty-project-state">
+                <Radio size={22} />
+                <div>
+                  <h3>No live project records yet.</h3>
+                  <p>
+                    The portal shell is ready. Next we connect the OpenClaw session sync so active work sessions
+                    write project status records here.
+                  </p>
+                </div>
+              </article>
+            ) : (
+              projectStatuses.map((project) => (
+                <article className="project-card" key={project.id}>
+                  <div className="project-card-top">
+                    <div>
+                      <h3>{project.project_name}</h3>
+                      <p>{project.client_name || 'Internal project'}</p>
+                    </div>
+                    <span className={`health-pill ${project.health}`}>
+                      {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
+                      {project.status}
+                    </span>
+                  </div>
+                  <dl className="project-fields">
+                    <div>
+                      <dt>Owner</dt>
+                      <dd>{project.owner || 'Unassigned'}</dd>
+                    </div>
+                    <div>
+                      <dt>Session</dt>
+                      <dd>{project.source_session_label || project.source_session_key || 'Manual status'}</dd>
+                    </div>
+                    <div>
+                      <dt>Last update</dt>
+                      <dd>{project.last_update || 'No update captured'}</dd>
+                    </div>
+                    <div>
+                      <dt>Next action</dt>
+                      <dd>{project.next_action || 'Needs next action'}</dd>
+                    </div>
+                    {project.blocker && (
+                      <div>
+                        <dt>Blocker</dt>
+                        <dd>{project.blocker}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  <div className="project-updated">
+                    <Clock3 size={15} />
+                    <span>Synced {new Date(project.updated_at).toLocaleString()}</span>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="access-request-band" id="access">
         <div className="intake-panel">

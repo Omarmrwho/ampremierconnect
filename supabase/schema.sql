@@ -7,6 +7,14 @@ begin
   if not exists (select 1 from pg_type where typname = 'intake_status') then
     create type public.intake_status as enum ('draft', 'submitted', 'reviewing', 'accepted', 'closed');
   end if;
+
+  if not exists (select 1 from pg_type where typname = 'project_operating_status') then
+    create type public.project_operating_status as enum ('active', 'waiting', 'blocked', 'complete');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'project_health') then
+    create type public.project_health as enum ('green', 'yellow', 'red');
+  end if;
 end $$;
 
 create table if not exists public.portal_profiles (
@@ -39,9 +47,26 @@ create table if not exists public.intake_requests (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.project_session_status (
+  id uuid primary key default gen_random_uuid(),
+  project_name text not null,
+  client_name text,
+  status public.project_operating_status not null default 'active',
+  health public.project_health not null default 'green',
+  source_session_key text,
+  source_session_label text,
+  owner text,
+  last_update text,
+  next_action text,
+  blocker text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.portal_profiles enable row level security;
 alter table public.access_requests enable row level security;
 alter table public.intake_requests enable row level security;
+alter table public.project_session_status enable row level security;
 
 create or replace function public.is_internal_admin()
 returns boolean
@@ -172,3 +197,77 @@ on public.intake_requests
 for select
 to authenticated
 using (public.is_internal_admin());
+
+drop policy if exists "Internal admins can read project session status" on public.project_session_status;
+create policy "Internal admins can read project session status"
+on public.project_session_status
+for select
+to authenticated
+using (public.is_internal_admin());
+
+drop policy if exists "Internal admins can insert project session status" on public.project_session_status;
+create policy "Internal admins can insert project session status"
+on public.project_session_status
+for insert
+to authenticated
+with check (public.is_internal_admin());
+
+drop policy if exists "Internal admins can update project session status" on public.project_session_status;
+create policy "Internal admins can update project session status"
+on public.project_session_status
+for update
+to authenticated
+using (public.is_internal_admin())
+with check (public.is_internal_admin());
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action
+)
+select
+  'AM Premier Connect Portal',
+  'AM Premier Solutions',
+  'active',
+  'green',
+  'main webchat',
+  'Elara',
+  'Approval queue is live. Internal command portal shell added.',
+  'Connect OpenClaw session sync into project_session_status.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'AM Premier Connect Portal'
+);
+
+insert into public.project_session_status (
+  project_name,
+  client_name,
+  status,
+  health,
+  source_session_label,
+  owner,
+  last_update,
+  next_action,
+  blocker
+)
+select
+  'Live Session Status Sync',
+  'Internal operations',
+  'waiting',
+  'yellow',
+  'OpenClaw sessions',
+  'Elara',
+  'Session listing is available to the agent runtime.',
+  'Create scheduled bridge that summarizes visible sessions and upserts portal records.',
+  'The deployed browser cannot directly call OpenClaw session tools.'
+where not exists (
+  select 1
+  from public.project_session_status
+  where project_name = 'Live Session Status Sync'
+);
