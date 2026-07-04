@@ -104,6 +104,31 @@ const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as co
 type ProjectFilter = (typeof projectFilters)[number]
 type ProjectOperatingStatus = ProjectSessionStatus['status']
 
+const projectStats: Record<
+  string,
+  {
+    summary: string
+    metrics: { label: string; value: string; note: string }[]
+    highlights: string[]
+  }
+> = {
+  'Power Intelligence Reports': {
+    summary: 'Latest power infrastructure scan covers AI/data center generator opportunities and commercial fit.',
+    metrics: [
+      { label: 'Tracked Opportunities', value: '7', note: 'Named AI/data center power opportunities' },
+      { label: 'High Priority', value: '2', note: 'Delta Forge 1 and San Marcos Data Center I' },
+      { label: 'Avg Fit Score', value: '71', note: 'Average final commercial score out of 100' },
+      { label: 'Avg Confidence', value: '66', note: 'Average evidence confidence out of 100' },
+    ],
+    highlights: [
+      'Delta Forge 1: 85 final score, 96 confidence, 3 to 12 month buying window.',
+      'San Marcos Data Center I: 84 final score, 92 confidence, now to 6 month buying window.',
+      '3 medium-priority opportunities need package-owner or permit validation.',
+      '2 research opportunities look more like ancillary/displacement paths than primary generator sales.',
+    ],
+  },
+}
+
 const getActionPriority = (project: ProjectSessionStatus) => {
   if (project.status === 'blocked' || project.health === 'red') {
     return { label: 'Critical', score: 3, tone: 'critical' }
@@ -173,8 +198,8 @@ function App() {
   const actionQueueProjects = [...projectStatuses]
     .filter((project) => project.status === 'waiting' || project.status === 'blocked' || Boolean(project.blocker))
     .sort((left, right) => getActionPriority(right).score - getActionPriority(left).score)
-  const selectedActionProject =
-    projectStatuses.find((project) => project.id === selectedActionProjectId) || actionQueueProjects[0] || null
+  const selectedActionProject = projectStatuses.find((project) => project.id === selectedActionProjectId) || null
+  const selectedProjectStats = selectedActionProject ? projectStats[selectedActionProject.project_name] : null
 
   const roleMessage = useMemo(() => {
     if (selectedRole === 'Vendor') {
@@ -686,6 +711,34 @@ function App() {
                     </div>
                   </dl>
                 </div>
+                {selectedProjectStats ? (
+                  <div className="project-stats-panel">
+                    <div>
+                      <span className="decision-label">Stats</span>
+                      <h3>Numbers behind this project</h3>
+                      <p>{selectedProjectStats.summary}</p>
+                    </div>
+                    <div className="stats-grid">
+                      {selectedProjectStats.metrics.map((metric) => (
+                        <div key={metric.label}>
+                          <span>{metric.label}</span>
+                          <strong>{metric.value}</strong>
+                          <small>{metric.note}</small>
+                        </div>
+                      ))}
+                    </div>
+                    <ul className="stats-highlights">
+                      {selectedProjectStats.highlights.map((highlight) => (
+                        <li key={highlight}>{highlight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="project-stats-empty">
+                    <span className="decision-label">Stats</span>
+                    <p>Detailed numbers are not connected to this project yet. Use a custom command to request a stats buildout.</p>
+                  </div>
+                )}
                 <div className="decision-actions">
                   <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'active')}>
                     Approve / Move Active
@@ -758,7 +811,11 @@ function App() {
                 </article>
               ) : (
                 filteredProjects.map((project) => (
-                  <article className="project-card" key={project.id}>
+                  <article
+                    className={`project-card ${selectedActionProjectId === project.id ? 'selected' : ''}`}
+                    key={project.id}
+                    onClick={() => setSelectedActionProjectId(project.id)}
+                  >
                     <div className="project-card-top">
                       <div>
                         <h3>{project.project_name}</h3>
@@ -797,7 +854,14 @@ function App() {
                       <Clock3 size={15} />
                       <span>Synced {new Date(project.updated_at).toLocaleString()}</span>
                     </div>
-                    <button type="button" className="project-update-button" onClick={() => requestProjectUpdate(project)}>
+                    <button
+                      type="button"
+                      className="project-update-button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        requestProjectUpdate(project)
+                      }}
+                    >
                       Request Update <ArrowRight size={16} />
                     </button>
                   </article>
