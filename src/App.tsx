@@ -161,6 +161,9 @@ function App() {
   useEffect(() => {
     if (isInternal) {
       loadAccessRequests()
+      window.setTimeout(() => {
+        document.getElementById('admin-approval-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 250)
     }
   }, [isInternal])
 
@@ -349,6 +352,11 @@ function App() {
             <div className="session-card">
               <strong>{profile?.full_name || session.user.email}</strong>
               <span>{profile ? `${profile.role} access` : profileStatus}</span>
+              {isInternal && (
+                <a className="full-button admin-link-button" href="#admin-approval-queue">
+                  Open Admin Approval Queue <ShieldCheck size={18} />
+                </a>
+              )}
               <button type="button" className="full-button" onClick={handleSignOut}>
                 Sign out <LogOut size={18} />
               </button>
@@ -500,7 +508,7 @@ function App() {
           )}
         </div>
 
-        <div className="queue-panel">
+        <div className="queue-panel" id="admin-approval-queue">
           <div className="panel-heading">
             <Zap size={20} />
             <div>
