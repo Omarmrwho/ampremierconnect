@@ -8,6 +8,7 @@ import {
   CircleCheck,
   ClipboardCheck,
   Clock3,
+  Download,
   ExternalLink,
   Filter,
   FileText,
@@ -19,6 +20,7 @@ import {
   Megaphone,
   MessageCircle,
   Radio,
+  Send,
   ShieldCheck,
   Target,
   UserRound,
@@ -795,6 +797,7 @@ function App() {
   const [campaignActivityFilter, setCampaignActivityFilter] = useState<CampaignActivityFilter>('all')
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [projectProposals, setProjectProposals] = useState<ProjectProposal[]>([])
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
   const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
@@ -943,6 +946,8 @@ function App() {
   const selectedProjectProposals = selectedActionProject
     ? projectProposals.filter((proposal) => proposal.project_id === selectedActionProject.id)
     : []
+  const selectedProposal =
+    selectedProjectProposals.find((proposal) => proposal.id === selectedProposalId) || selectedProjectProposals[0] || null
   const selectedProjectIdeas = selectedActionProject
     ? projectIdeas.filter((idea) => idea.project_id === selectedActionProject.id)
     : []
@@ -1063,6 +1068,7 @@ function App() {
     setSelectedCrmRecordId(null)
     setSelectedCrmRecordIds([])
     setSelectedCampaignId(null)
+    setSelectedProposalId(null)
     setCrmSearch('')
     setCampaignSearch('')
     setCampaignStatusFilter('all')
@@ -1567,6 +1573,15 @@ function App() {
     event.currentTarget.reset()
     setCommandDataStatus('Proposal draft saved.')
     await loadCommandRecords()
+  }
+
+  const printSelectedProposal = () => {
+    if (!selectedProposal) {
+      setCommandDataStatus('Create or select a proposal before downloading a PDF.')
+      return
+    }
+
+    window.print()
   }
 
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
@@ -3204,7 +3219,11 @@ function App() {
                               </thead>
                               <tbody>
                                 {selectedProjectProposals.map((proposal) => (
-                                  <tr key={proposal.id}>
+                                  <tr
+                                    className={selectedProposal?.id === proposal.id ? 'selected' : ''}
+                                    key={proposal.id}
+                                    onClick={() => setSelectedProposalId(proposal.id)}
+                                  >
                                     <td>
                                       <strong>{proposal.company_name}</strong>
                                       <small>{proposal.company_address || 'No address captured'}</small>
@@ -3235,6 +3254,80 @@ function App() {
                               <p>Create one when a CRM record or sales conversation reaches proposal stage.</p>
                             </div>
                           </article>
+                        )}
+                        {selectedProposal && (
+                          <section className="proposal-preview-panel">
+                            <div className="workspace-section-head">
+                              <div>
+                                <span className="decision-label">PDF Preview</span>
+                                <h3>{selectedProposal.company_name}</h3>
+                                <p>Select any proposal row to preview the branded output.</p>
+                              </div>
+                              <div className="proposal-actions">
+                                <button type="button" onClick={printSelectedProposal}>
+                                  Download PDF <Download size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setCommandDataStatus('Email sending is the next backend step. PDF preview is ready now.')}
+                                >
+                                  Email Later <Send size={16} />
+                                </button>
+                              </div>
+                            </div>
+                            <article className="proposal-document" aria-label="Proposal PDF preview">
+                              <header className="proposal-document-head">
+                                <div className="proposal-doc-brand">
+                                  <span className="brand-mark">AP</span>
+                                  <div>
+                                    <strong>AM Premier</strong>
+                                    <small>Proposal</small>
+                                  </div>
+                                </div>
+                                <div>
+                                  <span>Status</span>
+                                  <strong>{selectedProposal.status}</strong>
+                                </div>
+                              </header>
+                              <div className="proposal-doc-title">
+                                <span>Prepared for</span>
+                                <h2>{selectedProposal.company_name}</h2>
+                                <p>{selectedProposal.company_address || 'Company address pending'}</p>
+                              </div>
+                              <div className="proposal-doc-meta">
+                                <div>
+                                  <span>Directed to</span>
+                                  <strong>{selectedProposal.directed_to}</strong>
+                                  <small>{selectedProposal.contact_title || selectedProposal.contact_email || 'Contact details pending'}</small>
+                                </div>
+                                <div>
+                                  <span>Date</span>
+                                  <strong>{selectedProposal.proposal_date}</strong>
+                                  <small>{selectedProposal.proposal_time || 'Time not set'}</small>
+                                </div>
+                                <div>
+                                  <span>Investment</span>
+                                  <strong>{selectedProposal.price || 'TBD'}</strong>
+                                  <small>{selectedProposal.valid_until ? `Valid until ${selectedProposal.valid_until}` : 'Validity pending'}</small>
+                                </div>
+                              </div>
+                              <section>
+                                <span className="proposal-section-label">Scope</span>
+                                <p>{selectedProposal.scope_summary || 'Scope summary pending.'}</p>
+                              </section>
+                              <section>
+                                <span className="proposal-section-label">Terms</span>
+                                <p>{selectedProposal.terms || 'Terms pending.'}</p>
+                              </section>
+                              <footer className="proposal-doc-footer">
+                                <div>
+                                  <span>Next step</span>
+                                  <strong>{selectedProposal.next_step || 'Review and approve proposal.'}</strong>
+                                </div>
+                                <small>AM Premier Connect | Built for controlled execution from CRM to proposal.</small>
+                              </footer>
+                            </article>
+                          </section>
                         )}
                         <form className="ops-form-grid compact" onSubmit={createProposal}>
                           <label>

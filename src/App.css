@@ -776,6 +776,129 @@ textarea {
   background: #ffffff;
 }
 
+.proposal-preview-panel {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+
+.proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.proposal-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #133c4f;
+  font-weight: 850;
+}
+
+.proposal-actions button:last-child {
+  color: #133c4f;
+  background: #e7efe9;
+}
+
+.proposal-document {
+  display: grid;
+  gap: 22px;
+  max-width: 860px;
+  padding: clamp(22px, 4vw, 42px);
+  border: 1px solid rgba(19, 60, 79, 0.13);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 38px rgba(19, 60, 79, 0.08);
+}
+
+.proposal-document-head,
+.proposal-doc-meta,
+.proposal-doc-footer {
+  display: grid;
+  gap: 16px;
+}
+
+.proposal-document-head {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  padding-bottom: 18px;
+  border-bottom: 4px solid #133c4f;
+}
+
+.proposal-doc-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proposal-doc-brand strong,
+.proposal-document-head strong,
+.proposal-doc-title h2,
+.proposal-doc-meta strong,
+.proposal-doc-footer strong {
+  color: #10232b;
+}
+
+.proposal-doc-brand small,
+.proposal-document-head span,
+.proposal-doc-title span,
+.proposal-doc-title p,
+.proposal-doc-meta span,
+.proposal-doc-meta small,
+.proposal-doc-footer span,
+.proposal-doc-footer small {
+  color: #68777c;
+}
+
+.proposal-doc-title h2 {
+  margin: 4px 0 6px;
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1.02;
+}
+
+.proposal-doc-title p,
+.proposal-document section p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #2d3f46;
+  line-height: 1.7;
+}
+
+.proposal-doc-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 18px;
+  border-radius: 8px;
+  background: #f3f7f3;
+}
+
+.proposal-doc-meta div,
+.proposal-doc-footer div {
+  display: grid;
+  gap: 5px;
+}
+
+.proposal-section-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #133c4f;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.proposal-doc-footer {
+  padding-top: 18px;
+  border-top: 1px solid rgba(19, 60, 79, 0.14);
+}
+
 .campaign-table {
   width: 100%;
   min-width: 860px;
@@ -2563,6 +2686,19 @@ textarea {
   .crm-campaign-builder .wide {
     grid-column: auto;
   }
+
+  .proposal-document-head,
+  .proposal-doc-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .proposal-actions {
+    justify-content: stretch;
+  }
+
+  .proposal-actions button {
+    flex: 1 1 180px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2850,6 +2986,41 @@ textarea {
 
   .chat-bubble {
     width: 100%;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .proposal-document,
+  .proposal-document * {
+    visibility: visible;
+  }
+
+  .proposal-document {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    padding: 34px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .proposal-document-head {
+    grid-template-columns: 1fr auto;
+  }
+
+  .proposal-doc-meta {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
