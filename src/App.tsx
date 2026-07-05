@@ -1240,6 +1240,54 @@ function App() {
     await loadCommandRecords()
   }
 
+  const createCampaignFromSelectedCrm = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedActionProject || !supabase || selectedVisibleCrmRecordIds.length === 0) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    const audienceRecords = filteredSelectedProjectCrmRecords.filter((record) =>
+      selectedVisibleCrmRecordIds.includes(record.id),
+    )
+    const segments = Array.from(new Set(audienceRecords.map((record) => record.segment).filter(Boolean))).slice(0, 8)
+    const campaigns = Array.from(new Set(audienceRecords.map((record) => record.campaign).filter(Boolean))).slice(0, 8)
+    const sampleCompanies = audienceRecords.slice(0, 12).map((record) => record.company_name)
+    const missingPhone = audienceRecords.filter((record) => !record.phone).length
+    const missingSource = audienceRecords.filter((record) => !record.source && !record.website).length
+    const recommendation = [
+      `Audience: ${audienceRecords.length} CRM records selected from ${selectedActionProject.project_name}.`,
+      segments.length ? `Segments: ${segments.join(', ')}.` : '',
+      campaigns.length ? `Source campaigns: ${campaigns.join(', ')}.` : '',
+      sampleCompanies.length ? `Sample companies: ${sampleCompanies.join(', ')}.` : '',
+      `Data gaps before launch: ${missingPhone} missing phone, ${missingSource} missing source.`,
+      String(formData.get('campaignRecommendation') || '').trim(),
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    setCommandDataStatus(`Creating campaign audience from ${audienceRecords.length} CRM records...`)
+    const { error } = await supabase.from('project_campaigns').insert({
+      project_id: selectedActionProject.id,
+      campaign_name: String(formData.get('campaignName')),
+      campaign_type: String(formData.get('campaignType')) || 'marketing',
+      channel: String(formData.get('campaignChannel')) || null,
+      status: 'draft',
+      recommendation,
+      updated_at: new Date().toISOString(),
+    })
+
+    if (error) {
+      setCommandDataStatus('Campaign could not be created from the selected CRM records.')
+      return
+    }
+
+    event.currentTarget.reset()
+    setSelectedCrmRecordIds([])
+    setCommandDataStatus(`Campaign audience created from ${audienceRecords.length} CRM records.`)
+    await loadCommandRecords()
+  }
+
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setAccessStatus('Saving access request...')
@@ -1697,6 +1745,36 @@ function App() {
                     </button>
                   ))}
                 </div>
+                <form className="crm-campaign-builder" onSubmit={createCampaignFromSelectedCrm}>
+                  <div>
+                    <span className="decision-label">Campaign Bridge</span>
+                    <strong>Create a campaign audience from selected CRM records</strong>
+                  </div>
+                  <label>
+                    Campaign
+                    <input name="campaignName" placeholder="Facebook proof-of-concept audience" required type="text" />
+                  </label>
+                  <label>
+                    Type
+                    <select defaultValue="marketing" name="campaignType">
+                      <option value="marketing">Marketing</option>
+                      <option value="sales">Sales</option>
+                      <option value="proof-of-concept">Proof of concept</option>
+                      <option value="partner">Partner</option>
+                    </select>
+                  </label>
+                  <label>
+                    Channel
+                    <input name="campaignChannel" placeholder="Facebook, LinkedIn, email, calls" type="text" />
+                  </label>
+                  <label className="wide">
+                    Launch note
+                    <textarea name="campaignRecommendation" placeholder="Offer, angle, asset, proof point, or next execution step." />
+                  </label>
+                  <button type="submit" disabled={selectedVisibleCrmRecordIds.length === 0}>
+                    Create Campaign
+                  </button>
+                </form>
 
                 <div className="crm-record-workbench">
                   {selectedProjectCrmRecords.length === 0 ? (

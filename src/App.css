@@ -628,6 +628,78 @@ textarea {
   opacity: 0.45;
 }
 
+.crm-campaign-builder {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) repeat(3, minmax(140px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(19, 60, 79, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.crm-campaign-builder > div {
+  display: grid;
+  gap: 5px;
+  align-self: center;
+}
+
+.crm-campaign-builder strong {
+  color: #10232b;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.crm-campaign-builder label {
+  display: grid;
+  gap: 6px;
+  color: #65737a;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.crm-campaign-builder input,
+.crm-campaign-builder select,
+.crm-campaign-builder textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(19, 60, 79, 0.13);
+  border-radius: 8px;
+  color: #172126;
+  background: #f7faf8;
+  font: inherit;
+  text-transform: none;
+}
+
+.crm-campaign-builder textarea {
+  min-height: 40px;
+  padding-top: 9px;
+  resize: vertical;
+}
+
+.crm-campaign-builder .wide {
+  grid-column: span 2;
+}
+
+.crm-campaign-builder button {
+  min-height: 40px;
+  padding: 0 13px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #133c4f;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.crm-campaign-builder button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .crm-record-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
@@ -2090,6 +2162,7 @@ textarea {
   .crm-metrics,
   .crm-workspace,
   .crm-filter-grid,
+  .crm-campaign-builder,
   .crm-record-workbench,
   .metrics-row,
   .command-metrics,
@@ -2195,6 +2268,10 @@ textarea {
 
   .crm-bulk-bar span {
     width: 100%;
+  }
+
+  .crm-campaign-builder .wide {
+    grid-column: auto;
   }
 }
 
