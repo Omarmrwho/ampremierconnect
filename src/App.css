@@ -550,13 +550,18 @@ textarea {
   border: 1px solid rgba(19, 60, 79, 0.11);
 }
 
-.crm-toolbar input {
+.crm-toolbar input,
+.crm-toolbar select {
   width: 100%;
   border: 0;
   outline: 0;
   color: #172126;
   background: transparent;
   font: inherit;
+}
+
+.crm-toolbar select {
+  min-width: 140px;
 }
 
 .crm-toolbar span {

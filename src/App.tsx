@@ -112,9 +112,11 @@ const readinessItems = [
 const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as const
 const crmGapFilters = ['all', 'missing-phone', 'missing-source', 'missing-fit'] as const
 const crmBulkStages = ['follow-up', 'qualified', 'proposal', 'won', 'dead'] as const
+const campaignActivityFilters = ['all', 'has-activity', 'no-activity'] as const
 
 type ProjectFilter = (typeof projectFilters)[number]
 type CrmGapFilter = (typeof crmGapFilters)[number]
+type CampaignActivityFilter = (typeof campaignActivityFilters)[number]
 type ProjectOperatingStatus = ProjectSessionStatus['status']
 type WorkspaceTab = 'command' | 'construction' | 'crm' | 'campaigns' | 'ideas' | 'agents'
 
@@ -770,6 +772,8 @@ function App() {
   const [projectCampaigns, setProjectCampaigns] = useState<ProjectCampaign[]>([])
   const [projectCampaignActivities, setProjectCampaignActivities] = useState<ProjectCampaignActivity[]>([])
   const [campaignSearch, setCampaignSearch] = useState('')
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState('all')
+  const [campaignActivityFilter, setCampaignActivityFilter] = useState<CampaignActivityFilter>('all')
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
   const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
@@ -779,12 +783,15 @@ function App() {
   const isCommandRoute = routePath === '/command'
   const isCrmRoute = routePath === '/crm'
   const isChatRoute = routePath === '/chat'
-  const operatingProjects = [
-    ...projectStatuses,
-    ...starterProjects.filter(
-      (starterProject) => !projectStatuses.some((project) => project.project_name === starterProject.project_name),
-    ),
-  ]
+  const operatingProjects = useMemo(
+    () => [
+      ...projectStatuses,
+      ...starterProjects.filter(
+        (starterProject) => !projectStatuses.some((project) => project.project_name === starterProject.project_name),
+      ),
+    ],
+    [projectStatuses],
+  )
   const activeProjects = operatingProjects.filter((project) => project.status === 'active').length
   const blockedProjects = operatingProjects.filter((project) => project.status === 'blocked').length
   const waitingProjects = operatingProjects.filter((project) => project.status === 'waiting').length
@@ -851,30 +858,6 @@ function App() {
   const selectedProjectCampaigns = selectedActionProject
     ? projectCampaigns.filter((campaign) => campaign.project_id === selectedActionProject.id)
     : []
-  const campaignSearchText = campaignSearch.trim().toLowerCase()
-  const filteredSelectedProjectCampaigns = selectedProjectCampaigns.filter((campaign) => {
-    if (!campaignSearchText) {
-      return true
-    }
-
-    return [
-      campaign.campaign_name,
-      campaign.campaign_type,
-      campaign.channel,
-      campaign.status,
-      campaign.objective,
-      campaign.audience,
-      campaign.offer,
-      campaign.owner,
-      campaign.next_step,
-      campaign.proof_notes,
-      campaign.recommendation,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-      .includes(campaignSearchText)
-  })
   const getCampaignActivitySummary = (campaignId: string) => {
     const activities = projectCampaignActivities
       .filter((activity) => activity.campaign_id === campaignId)
@@ -889,6 +872,41 @@ function App() {
       latestOutcome: latestActivity?.outcome || latestActivity?.next_step || '',
     }
   }
+  const campaignFilterOptions = {
+    statuses: ['all', ...Array.from(new Set(selectedProjectCampaigns.map((campaign) => campaign.status).filter(Boolean))).sort()],
+  }
+  const campaignSearchText = campaignSearch.trim().toLowerCase()
+  const filteredSelectedProjectCampaigns = selectedProjectCampaigns.filter((campaign) => {
+    const activitySummary = getCampaignActivitySummary(campaign.id)
+    const matchesSearch = campaignSearchText
+      ? [
+      campaign.campaign_name,
+      campaign.campaign_type,
+      campaign.channel,
+      campaign.status,
+      campaign.objective,
+      campaign.audience,
+      campaign.offer,
+      campaign.owner,
+      campaign.next_step,
+      campaign.proof_notes,
+      campaign.recommendation,
+      activitySummary.latestLabel,
+      activitySummary.latestOutcome,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(campaignSearchText)
+      : true
+    const matchesStatus = campaignStatusFilter === 'all' || campaign.status === campaignStatusFilter
+    const matchesActivity =
+      campaignActivityFilter === 'all' ||
+      (campaignActivityFilter === 'has-activity' && activitySummary.count > 0) ||
+      (campaignActivityFilter === 'no-activity' && activitySummary.count === 0)
+
+    return matchesSearch && matchesStatus && matchesActivity
+  })
   const selectedCampaign =
     filteredSelectedProjectCampaigns.find((campaign) => campaign.id === selectedCampaignId) ||
     filteredSelectedProjectCampaigns[0] ||
@@ -1015,6 +1033,8 @@ function App() {
     setSelectedCampaignId(null)
     setCrmSearch('')
     setCampaignSearch('')
+    setCampaignStatusFilter('all')
+    setCampaignActivityFilter('all')
     setCrmStageFilter('all')
     setCrmSegmentFilter('all')
     setCrmCampaignFilter('all')
@@ -2719,6 +2739,27 @@ function App() {
                                   placeholder="Search campaign, channel, audience, status..."
                                   type="search"
                                 />
+                              </label>
+                              <label>
+                                Status
+                                <select value={campaignStatusFilter} onChange={(event) => setCampaignStatusFilter(event.target.value)}>
+                                  {campaignFilterOptions.statuses.map((status) => (
+                                    <option key={status} value={status}>
+                                      {status === 'all' ? 'All statuses' : status}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                Activity
+                                <select
+                                  value={campaignActivityFilter}
+                                  onChange={(event) => setCampaignActivityFilter(event.target.value as CampaignActivityFilter)}
+                                >
+                                  <option value="all">All activity</option>
+                                  <option value="has-activity">Has activity</option>
+                                  <option value="no-activity">No activity</option>
+                                </select>
                               </label>
                               <span>
                                 Showing {filteredSelectedProjectCampaigns.length} of {selectedProjectCampaigns.length}
