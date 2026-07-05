@@ -1287,10 +1287,10 @@ function App() {
     )
   }
 
-  if (isCommandRoute || isCrmRoute) {
+  if (isCrmRoute) {
     return (
-      <main className="portal-shell command-page-shell">
-        <nav className="topbar" aria-label={isCrmRoute ? 'CRM navigation' : 'Command portal navigation'}>
+      <main className="portal-shell command-page-shell crm-page-shell">
+        <nav className="topbar" aria-label="CRM navigation">
           <button
             type="button"
             className="brand brand-button"
@@ -1300,7 +1300,222 @@ function App() {
             <span className="brand-mark">AP</span>
             <span>
               <strong>AM Premier Connect</strong>
-              <small>{isCrmRoute ? 'CRM pipeline' : 'Internal command portal'}</small>
+              <small>CRM pipeline</small>
+            </span>
+          </button>
+          <div className="nav-actions">
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/')}>
+              Home
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/command')}>
+              Command
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
+              CRM
+            </button>
+            {session && (
+              <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
+        </nav>
+
+        {isInternal ? (
+          <section className="command-section command-page crm-page">
+            <div className="section-heading command-heading">
+              <div>
+                <p className="eyebrow">CRM pipeline</p>
+                <h1>Companies, contacts, stages, and follow-ups.</h1>
+                <p className="hero-text">
+                  A dedicated sales workspace for AM Premier opportunities, tied back to the project each record belongs to.
+                </p>
+              </div>
+              <button type="button" className="refresh-button" onClick={loadCommandRecords}>
+                Refresh CRM <Radio size={17} />
+              </button>
+            </div>
+
+            <div className="crm-metrics" aria-label="CRM summary">
+              <div>
+                <span>CRM Records</span>
+                <strong>{projectCrmRecords.length}</strong>
+              </div>
+              <div>
+                <span>Projects</span>
+                <strong>{operatingProjects.length}</strong>
+              </div>
+              <div>
+                <span>Selected</span>
+                <strong>{selectedActionProject?.project_name || 'None'}</strong>
+              </div>
+            </div>
+
+            <section className="crm-workspace">
+              <aside className="crm-project-panel" aria-label="CRM project selector">
+                <div className="panel-heading">
+                  <BriefcaseBusiness size={20} />
+                  <div>
+                    <h2>Projects</h2>
+                    <p>Select the project this CRM pipeline belongs to.</p>
+                  </div>
+                </div>
+                <div className="crm-project-list">
+                  {operatingProjects.map((project) => (
+                    <button
+                      type="button"
+                      className={selectedActionProjectId === project.id ? 'active' : ''}
+                      key={project.id}
+                      onClick={() => setSelectedActionProjectId(project.id)}
+                    >
+                      <strong>{project.project_name}</strong>
+                      <span>{project.client_name || 'Internal project'}</span>
+                    </button>
+                  ))}
+                </div>
+              </aside>
+
+              <section className="crm-pipeline-panel" aria-label="CRM records">
+                <div className="workspace-section-head">
+                  <div>
+                    <span className="decision-label">Pipeline</span>
+                    <h3>{selectedActionProject?.project_name || 'Select a project'}</h3>
+                    <p>Manage company targets, contact owners, stage, value, and next step.</p>
+                  </div>
+                  {selectedActionProject && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        createAgentWorkOrder(
+                          selectedActionProject,
+                          'crm_agent',
+                          'Create or refresh the CRM pipeline, contact map, next follow-ups, and opportunity stages.',
+                        )
+                      }
+                    >
+                      Ask CRM Agent
+                    </button>
+                  )}
+                </div>
+
+                {commandDataStatus && (
+                  <div className="success-note" role="status">
+                    <ClipboardCheck size={18} />
+                    <span>{commandDataStatus}</span>
+                  </div>
+                )}
+                {projectStatusMessage && (
+                  <div className="success-note" role="status">
+                    <ShieldCheck size={18} />
+                    <span>{projectStatusMessage}</span>
+                  </div>
+                )}
+
+                <div className="crm-grid crm-page-grid">
+                  {selectedProjectCrmRecords.length === 0 ? (
+                    <article className="empty-project-state">
+                      <BriefcaseBusiness size={22} />
+                      <div>
+                        <h3>No CRM records for this project yet.</h3>
+                        <p>Add the first company, contact, stage, owner, value, and next step below.</p>
+                      </div>
+                    </article>
+                  ) : (
+                    selectedProjectCrmRecords.map((record) => (
+                      <article className="crm-card" key={record.id}>
+                        <span>{record.stage}</span>
+                        <h3>{record.company_name}</h3>
+                        <p>
+                          {record.next_step || 'No next step captured.'}
+                          {record.contact_name ? ` Contact: ${record.contact_name}.` : ''}
+                          {record.value_estimate ? ` Value: ${record.value_estimate}.` : ''}
+                        </p>
+                        <small>{record.owner || 'Unassigned'}</small>
+                        <div className="record-actions">
+                          <button
+                            type="button"
+                            onClick={() => updateCommandRecordStatus('project_crm_records', record.id, 'follow-up')}
+                          >
+                            Follow-up
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateCommandRecordStatus('project_crm_records', record.id, 'won')}
+                          >
+                            Won
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+
+                <form className="ops-form-grid compact crm-entry-form" onSubmit={(event) => createCommandRecord(event, 'project_crm_records')}>
+                  <label>
+                    Company
+                    <input name="companyName" placeholder="Site owner / utility / vendor" required type="text" />
+                  </label>
+                  <label>
+                    Contact
+                    <input name="contactName" placeholder="Decision maker" type="text" />
+                  </label>
+                  <label>
+                    Stage
+                    <input name="crmStage" placeholder="Qualification / proposal / follow-up" type="text" />
+                  </label>
+                  <label>
+                    Owner
+                    <input name="crmOwner" placeholder="CRM Agent" type="text" />
+                  </label>
+                  <label>
+                    Value
+                    <input name="crmValue" placeholder="$ amount or TBD" type="text" />
+                  </label>
+                  <label className="wide">
+                    Next step
+                    <textarea name="crmNextStep" placeholder="Call, quote, meeting, doc request, or owner decision." />
+                  </label>
+                  <button type="submit" disabled={!selectedActionProject}>
+                    Add CRM Record
+                  </button>
+                </form>
+              </section>
+            </section>
+          </section>
+        ) : (
+          <section className="locked-command-state">
+            <div className="login-panel">
+              <div className="panel-heading">
+                <LockKeyhole size={20} />
+                <div>
+                  <h1>CRM is internal only.</h1>
+                  <p>Sign in with an approved internal account to open the CRM pipeline.</p>
+                </div>
+              </div>
+              <button type="button" className="full-button" onClick={() => navigateTo('/')}>
+                Return to portal login <ArrowRight size={18} />
+              </button>
+            </div>
+          </section>
+        )}
+      </main>
+    )
+  }
+
+  if (isCommandRoute) {
+    return (
+      <main className="portal-shell command-page-shell">
+        <nav className="topbar" aria-label="Command portal navigation">
+          <button
+            type="button"
+            className="brand brand-button"
+            aria-label="Return to AM Premier Connect home"
+            onClick={() => navigateTo('/')}
+          >
+            <span className="brand-mark">AP</span>
+            <span>
+              <strong>AM Premier Connect</strong>
+              <small>Internal command portal</small>
             </span>
           </button>
           <div className="nav-actions">
@@ -1325,12 +1540,10 @@ function App() {
           <section className="command-section command-page">
             <div className="section-heading command-heading">
               <div>
-                <p className="eyebrow">{isCrmRoute ? 'CRM pipeline' : 'Internal command portal'}</p>
-                <h1>{isCrmRoute ? 'CRM pipeline for AM Premier opportunities.' : 'Live project status pulled from operating sessions.'}</h1>
+                <p className="eyebrow">Internal command portal</p>
+                <h1>Live project status pulled from operating sessions.</h1>
                 <p className="hero-text">
-                  {isCrmRoute
-                    ? 'Track companies, contacts, stages, values, owners, and next follow-ups by project.'
-                    : 'Internal workspace for project health, next actions, blockers, and active session status.'}
+                  Internal workspace for project health, next actions, blockers, and active session status.
                 </p>
               </div>
               <button type="button" className="refresh-button" onClick={loadProjectStatuses}>

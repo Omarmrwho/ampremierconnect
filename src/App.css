@@ -446,6 +446,97 @@ textarea {
   line-height: 1;
 }
 
+.crm-page-shell,
+.crm-page {
+  background: #f7faf8;
+}
+
+.crm-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.crm-metrics div,
+.crm-project-panel,
+.crm-pipeline-panel {
+  border: 1px solid rgba(19, 60, 79, 0.11);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.crm-metrics div {
+  display: grid;
+  gap: 8px;
+  min-height: 108px;
+  padding: 18px;
+}
+
+.crm-metrics span,
+.crm-project-list span {
+  color: #66747b;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.crm-metrics strong {
+  color: #10232b;
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1.08;
+}
+
+.crm-workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.crm-project-panel,
+.crm-pipeline-panel {
+  padding: 18px;
+}
+
+.crm-project-list {
+  display: grid;
+  gap: 8px;
+}
+
+.crm-project-list button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 74px;
+  padding: 12px;
+  border-radius: 8px;
+  color: #172126;
+  background: #f3f6f4;
+  text-align: left;
+}
+
+.crm-project-list button.active {
+  color: #ffffff;
+  background: #133c4f;
+}
+
+.crm-project-list button.active span {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.crm-page-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 14px 0;
+}
+
+.crm-page-grid .empty-project-state {
+  grid-column: 1 / -1;
+}
+
+.crm-entry-form {
+  margin-top: 14px;
+}
+
 .locked-command-state {
   display: grid;
   place-items: center;
