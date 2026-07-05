@@ -453,7 +453,7 @@ textarea {
 
 .crm-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -524,13 +524,181 @@ textarea {
   color: rgba(255, 255, 255, 0.74);
 }
 
-.crm-page-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.crm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 10px;
+  border: 1px solid rgba(19, 60, 79, 0.11);
+  border-radius: 8px;
+  background: #f7faf8;
+}
+
+.crm-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: min(100%, 280px);
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #65737a;
+  background: #ffffff;
+  border: 1px solid rgba(19, 60, 79, 0.11);
+}
+
+.crm-toolbar input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: #172126;
+  background: transparent;
+  font: inherit;
+}
+
+.crm-toolbar span {
+  color: #66747b;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.crm-record-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 14px;
+  align-items: start;
   margin: 14px 0;
 }
 
-.crm-page-grid .empty-project-state {
+.crm-record-workbench .empty-project-state {
   grid-column: 1 / -1;
+}
+
+.crm-table-wrap {
+  overflow: auto;
+  border: 1px solid rgba(19, 60, 79, 0.11);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.crm-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.crm-table th,
+.crm-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(19, 60, 79, 0.09);
+  text-align: left;
+  vertical-align: top;
+}
+
+.crm-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #65737a;
+  background: #f7faf8;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.crm-table tbody tr {
+  cursor: pointer;
+}
+
+.crm-table tbody tr:hover,
+.crm-table tbody tr.selected {
+  background: #eef5f1;
+}
+
+.crm-table td {
+  color: #2f4048;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.crm-table td strong,
+.crm-table td small,
+.crm-table td span {
+  display: block;
+}
+
+.crm-table td strong {
+  color: #10232b;
+}
+
+.crm-table td small {
+  margin-top: 4px;
+  color: #7a858a;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.crm-stage-pill {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #174531;
+  background: #e4f5ea;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.crm-detail-panel {
+  position: sticky;
+  top: 92px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(19, 60, 79, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.crm-detail-panel h3 {
+  margin-bottom: 2px;
+  color: #10232b;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.crm-detail-panel dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.crm-detail-panel dl div {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(19, 60, 79, 0.08);
+}
+
+.crm-detail-panel dt {
+  color: #65737a;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.crm-detail-panel dd {
+  margin: 0;
+  color: #26373f;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
 }
 
 .crm-entry-form {
@@ -1845,6 +2013,9 @@ textarea {
   .hero-band,
   .lane-grid,
   .workspace-band,
+  .crm-metrics,
+  .crm-workspace,
+  .crm-record-workbench,
   .metrics-row,
   .command-metrics,
   .command-board,
@@ -1937,6 +2108,10 @@ textarea {
 
   .row-actions button {
     flex: 1;
+  }
+
+  .crm-detail-panel {
+    position: static;
   }
 }
 
@@ -2059,6 +2234,9 @@ textarea {
   .login-panel,
   .intake-panel,
   .queue-panel,
+  .crm-project-panel,
+  .crm-pipeline-panel,
+  .crm-detail-panel,
   .movement-panel,
   .action-panel,
   .ops-create-panel,
@@ -2105,6 +2283,7 @@ textarea {
   .stats-lanes,
   .ops-form-grid,
   .ops-form-grid.compact,
+  .crm-metrics,
   .workspace-kpi-grid,
   .crm-grid,
   .campaign-grid,
@@ -2128,6 +2307,7 @@ textarea {
   }
 
   .workspace-kpi-grid,
+  .crm-metrics,
   .crm-grid,
   .campaign-grid,
   .agent-grid {
@@ -2155,6 +2335,19 @@ textarea {
 
   .ops-form-grid button {
     width: 100%;
+  }
+
+  .crm-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .crm-toolbar span {
+    white-space: normal;
+  }
+
+  .crm-table {
+    min-width: 760px;
   }
 
   .project-card-top {

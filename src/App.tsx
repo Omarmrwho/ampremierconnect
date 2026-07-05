@@ -198,6 +198,19 @@ type ProjectAgentRecommendation = {
 
 type CommandTable = 'project_tasks' | 'project_crm_records' | 'project_campaigns' | 'project_ideas' | 'project_agent_recommendations'
 
+type ParsedCrmRecord = ProjectCrmRecord & {
+  email: string
+  phone: string
+  location: string
+  segment: string
+  website: string
+  source: string
+  whyFit: string
+  campaign: string
+  sent: string
+  followUp: string
+}
+
 const workspaceTabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'command', label: 'Command' },
   { id: 'construction', label: 'Schedule' },
@@ -643,6 +656,48 @@ const getProjectProgress = (project: ProjectSessionStatus) => {
   return { value: 75, label: 'In progress' }
 }
 
+const getCrmField = (details: string | null, label: string) => {
+  if (!details) {
+    return ''
+  }
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = details.match(new RegExp(`${escapedLabel}:\\s*([\\s\\S]*?)(?=\\s\\|\\s[A-Z][A-Za-z /-]*:|$)`, 'i'))
+  return match?.[1]?.trim() || ''
+}
+
+const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
+  const details = record.next_step || ''
+  const email = getCrmField(details, 'Email')
+  const phone = getCrmField(details, 'Phone')
+  const location = getCrmField(details, 'Location')
+  const segment = getCrmField(details, 'Segment')
+  const website = getCrmField(details, 'Website')
+  const source = getCrmField(details, 'Source')
+  const whyFit = getCrmField(details, 'Why fit')
+  const campaign = getCrmField(details, 'Campaign')
+  const sent = getCrmField(details, 'Sent')
+  const extraRoutes = getCrmField(details, 'Additional sends/routes')
+  const manualNextStep =
+    details && !email && !phone && !location && !segment && !website && !source && !whyFit && !campaign && !sent
+      ? details
+      : ''
+
+  return {
+    ...record,
+    email,
+    phone,
+    location,
+    segment,
+    website,
+    source,
+    whyFit,
+    campaign,
+    sent,
+    followUp: manualNextStep || extraRoutes || 'Review reply status and schedule next touch.',
+  }
+}
+
 function App() {
   const [routePath, setRoutePath] = useState(() => window.location.pathname)
   const [selectedRole, setSelectedRole] = useState<(typeof roles)[number]>('Client')
@@ -669,6 +724,8 @@ function App() {
   const [commandDataStatus, setCommandDataStatus] = useState('')
   const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([])
   const [projectCrmRecords, setProjectCrmRecords] = useState<ProjectCrmRecord[]>([])
+  const [crmSearch, setCrmSearch] = useState('')
+  const [selectedCrmRecordId, setSelectedCrmRecordId] = useState<string | null>(null)
   const [projectCampaigns, setProjectCampaigns] = useState<ProjectCampaign[]>([])
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
   const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
@@ -706,6 +763,33 @@ function App() {
   const selectedProjectCrmRecords = selectedActionProject
     ? projectCrmRecords.filter((record) => record.project_id === selectedActionProject.id)
     : []
+  const parsedSelectedProjectCrmRecords = selectedProjectCrmRecords.map(parseCrmRecord)
+  const crmSearchText = crmSearch.trim().toLowerCase()
+  const filteredSelectedProjectCrmRecords = crmSearchText
+    ? parsedSelectedProjectCrmRecords.filter((record) =>
+        [
+          record.company_name,
+          record.contact_name,
+          record.stage,
+          record.email,
+          record.phone,
+          record.location,
+          record.segment,
+          record.campaign,
+          record.whyFit,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(crmSearchText),
+      )
+    : parsedSelectedProjectCrmRecords
+  const selectedCrmRecord =
+    filteredSelectedProjectCrmRecords.find((record) => record.id === selectedCrmRecordId) ||
+    filteredSelectedProjectCrmRecords[0] ||
+    null
+  const selectedProjectStageCount = new Set(parsedSelectedProjectCrmRecords.map((record) => record.stage)).size
+  const selectedProjectContactCount = parsedSelectedProjectCrmRecords.filter((record) => record.email || record.phone).length
   const selectedProjectCampaigns = selectedActionProject
     ? projectCampaigns.filter((campaign) => campaign.project_id === selectedActionProject.id)
     : []
@@ -815,6 +899,11 @@ function App() {
     window.setTimeout(() => {
       decisionDrawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 80)
+  }, [selectedActionProjectId])
+
+  useEffect(() => {
+    setSelectedCrmRecordId(null)
+    setCrmSearch('')
   }, [selectedActionProjectId])
 
   const navigateTo = (path: string) => {
@@ -1349,6 +1438,14 @@ function App() {
                 <span>Selected</span>
                 <strong>{selectedActionProject?.project_name || 'None'}</strong>
               </div>
+              <div>
+                <span>Contacts</span>
+                <strong>{selectedProjectContactCount}</strong>
+              </div>
+              <div>
+                <span>Stages</span>
+                <strong>{selectedProjectStageCount}</strong>
+              </div>
             </div>
 
             <section className="crm-workspace">
@@ -1411,7 +1508,22 @@ function App() {
                   </div>
                 )}
 
-                <div className="crm-grid crm-page-grid">
+                <div className="crm-toolbar" aria-label="CRM record filters">
+                  <label>
+                    <Filter size={16} />
+                    <input
+                      value={crmSearch}
+                      onChange={(event) => setCrmSearch(event.target.value)}
+                      placeholder="Search company, email, city, segment, campaign..."
+                      type="search"
+                    />
+                  </label>
+                  <span>
+                    Showing {filteredSelectedProjectCrmRecords.length} of {selectedProjectCrmRecords.length}
+                  </span>
+                </div>
+
+                <div className="crm-record-workbench">
                   {selectedProjectCrmRecords.length === 0 ? (
                     <article className="empty-project-state">
                       <BriefcaseBusiness size={22} />
@@ -1420,33 +1532,114 @@ function App() {
                         <p>Add the first company, contact, stage, owner, value, and next step below.</p>
                       </div>
                     </article>
+                  ) : filteredSelectedProjectCrmRecords.length === 0 ? (
+                    <article className="empty-project-state">
+                      <Filter size={22} />
+                      <div>
+                        <h3>No matching CRM records.</h3>
+                        <p>Clear the search or try a company, city, email, campaign, or segment.</p>
+                      </div>
+                    </article>
                   ) : (
-                    selectedProjectCrmRecords.map((record) => (
-                      <article className="crm-card" key={record.id}>
-                        <span>{record.stage}</span>
-                        <h3>{record.company_name}</h3>
-                        <p>
-                          {record.next_step || 'No next step captured.'}
-                          {record.contact_name ? ` Contact: ${record.contact_name}.` : ''}
-                          {record.value_estimate ? ` Value: ${record.value_estimate}.` : ''}
-                        </p>
-                        <small>{record.owner || 'Unassigned'}</small>
-                        <div className="record-actions">
-                          <button
-                            type="button"
-                            onClick={() => updateCommandRecordStatus('project_crm_records', record.id, 'follow-up')}
-                          >
-                            Follow-up
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateCommandRecordStatus('project_crm_records', record.id, 'won')}
-                          >
-                            Won
-                          </button>
-                        </div>
-                      </article>
-                    ))
+                    <>
+                      <div className="crm-table-wrap">
+                        <table className="crm-table">
+                          <thead>
+                            <tr>
+                              <th>Company</th>
+                              <th>Contact</th>
+                              <th>Segment</th>
+                              <th>Stage</th>
+                              <th>Location</th>
+                              <th>Campaign</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredSelectedProjectCrmRecords.map((record) => (
+                              <tr
+                                className={selectedCrmRecord?.id === record.id ? 'selected' : ''}
+                                key={record.id}
+                                onClick={() => setSelectedCrmRecordId(record.id)}
+                              >
+                                <td>
+                                  <strong>{record.company_name}</strong>
+                                  <small>{record.value_estimate || 'Opportunity'}</small>
+                                </td>
+                                <td>
+                                  <span>{record.email || record.contact_name || 'No email captured'}</span>
+                                  <small>{record.phone || 'No phone'}</small>
+                                </td>
+                                <td>{record.segment || 'Uncategorized'}</td>
+                                <td>
+                                  <span className="crm-stage-pill">{record.stage}</span>
+                                </td>
+                                <td>{record.location || 'Not listed'}</td>
+                                <td>{record.campaign || 'Manual record'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {selectedCrmRecord && (
+                        <aside className="crm-detail-panel" aria-label="Selected CRM record details">
+                          <span className="decision-label">{selectedCrmRecord.stage}</span>
+                          <h3>{selectedCrmRecord.company_name}</h3>
+                          <dl>
+                            <div>
+                              <dt>Email</dt>
+                              <dd>{selectedCrmRecord.email || 'Not captured'}</dd>
+                            </div>
+                            <div>
+                              <dt>Phone</dt>
+                              <dd>{selectedCrmRecord.phone || 'Not captured'}</dd>
+                            </div>
+                            <div>
+                              <dt>Contact</dt>
+                              <dd>{selectedCrmRecord.contact_name || 'Routing contact'}</dd>
+                            </div>
+                            <div>
+                              <dt>Location</dt>
+                              <dd>{selectedCrmRecord.location || 'Not captured'}</dd>
+                            </div>
+                            <div>
+                              <dt>Campaign</dt>
+                              <dd>{selectedCrmRecord.campaign || 'Manual CRM record'}</dd>
+                            </div>
+                            <div>
+                              <dt>Sent</dt>
+                              <dd>{selectedCrmRecord.sent || 'Not captured'}</dd>
+                            </div>
+                            <div>
+                              <dt>Source</dt>
+                              <dd>{selectedCrmRecord.source || selectedCrmRecord.website || 'Not captured'}</dd>
+                            </div>
+                            <div>
+                              <dt>Why It Fits</dt>
+                              <dd>{selectedCrmRecord.whyFit || 'No fit note captured.'}</dd>
+                            </div>
+                            <div>
+                              <dt>Next Step</dt>
+                              <dd>{selectedCrmRecord.followUp}</dd>
+                            </div>
+                          </dl>
+                          <div className="record-actions">
+                            <button
+                              type="button"
+                              onClick={() => updateCommandRecordStatus('project_crm_records', selectedCrmRecord.id, 'follow-up')}
+                            >
+                              Follow-up
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateCommandRecordStatus('project_crm_records', selectedCrmRecord.id, 'won')}
+                            >
+                              Won
+                            </button>
+                          </div>
+                        </aside>
+                      )}
+                    </>
                   )}
                 </div>
 
