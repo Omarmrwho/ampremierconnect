@@ -676,6 +676,7 @@ function App() {
 
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
+  const isCrmRoute = routePath === '/crm'
   const isChatRoute = routePath === '/chat'
   const operatingProjects = [
     ...projectStatuses,
@@ -791,6 +792,20 @@ function App() {
       loadCommandRecords()
     }
   }, [isInternal])
+
+  useEffect(() => {
+    if (isCrmRoute) {
+      setWorkspaceTab('crm')
+    }
+  }, [isCrmRoute])
+
+  useEffect(() => {
+    if (!isInternal || (!isCommandRoute && !isCrmRoute) || selectedActionProjectId || operatingProjects.length === 0) {
+      return
+    }
+
+    setSelectedActionProjectId(operatingProjects[0].id)
+  }, [isInternal, isCommandRoute, isCrmRoute, selectedActionProjectId, operatingProjects])
 
   useEffect(() => {
     if (!selectedActionProjectId) {
@@ -1272,10 +1287,10 @@ function App() {
     )
   }
 
-  if (isCommandRoute) {
+  if (isCommandRoute || isCrmRoute) {
     return (
       <main className="portal-shell command-page-shell">
-        <nav className="topbar" aria-label="Command portal navigation">
+        <nav className="topbar" aria-label={isCrmRoute ? 'CRM navigation' : 'Command portal navigation'}>
           <button
             type="button"
             className="brand brand-button"
@@ -1285,12 +1300,18 @@ function App() {
             <span className="brand-mark">AP</span>
             <span>
               <strong>AM Premier Connect</strong>
-              <small>Internal command portal</small>
+              <small>{isCrmRoute ? 'CRM pipeline' : 'Internal command portal'}</small>
             </span>
           </button>
           <div className="nav-actions">
             <button type="button" className="nav-link-button" onClick={() => navigateTo('/')}>
               Home
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/command')}>
+              Command
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
+              CRM
             </button>
             {session && (
               <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
@@ -1304,10 +1325,12 @@ function App() {
           <section className="command-section command-page">
             <div className="section-heading command-heading">
               <div>
-                <p className="eyebrow">Internal command portal</p>
-                <h1>Live project status pulled from operating sessions.</h1>
+                <p className="eyebrow">{isCrmRoute ? 'CRM pipeline' : 'Internal command portal'}</p>
+                <h1>{isCrmRoute ? 'CRM pipeline for AM Premier opportunities.' : 'Live project status pulled from operating sessions.'}</h1>
                 <p className="hero-text">
-                  Internal workspace for project health, next actions, blockers, and active session status.
+                  {isCrmRoute
+                    ? 'Track companies, contacts, stages, values, owners, and next follow-ups by project.'
+                    : 'Internal workspace for project health, next actions, blockers, and active session status.'}
                 </p>
               </div>
               <button type="button" className="refresh-button" onClick={loadProjectStatuses}>
@@ -2278,9 +2301,14 @@ function App() {
               Portal Home
             </button>
             {isInternal && (
-              <button type="button" onClick={() => navigateTo('/command')}>
-                Command Portal
-              </button>
+              <>
+                <button type="button" onClick={() => navigateTo('/command')}>
+                  Command Portal
+                </button>
+                <button type="button" onClick={() => navigateTo('/crm')}>
+                  CRM
+                </button>
+              </>
             )}
             {session && (
               <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
@@ -2350,6 +2378,11 @@ function App() {
         <div className="nav-actions">
           <a href="#access">Request Portal Approval</a>
           <a href="#intake">Start Intake</a>
+          {isInternal && (
+            <button type="button" onClick={() => navigateTo('/crm')}>
+              CRM
+            </button>
+          )}
           <button type="button" onClick={() => navigateTo('/chat')}>
             Elara Workspace
           </button>
@@ -2400,9 +2433,14 @@ function App() {
               <strong>{profile?.full_name || session.user.email}</strong>
               <span>{profile ? `${profile.role} access` : profileStatus}</span>
               {isInternal && (
-                <button type="button" className="full-button admin-link-button" onClick={() => navigateTo('/command')}>
-                  Open Command Portal <Radio size={18} />
-                </button>
+                <>
+                  <button type="button" className="full-button admin-link-button" onClick={() => navigateTo('/crm')}>
+                    Open CRM <BriefcaseBusiness size={18} />
+                  </button>
+                  <button type="button" className="full-button admin-link-button" onClick={() => navigateTo('/command')}>
+                    Open Command Portal <Radio size={18} />
+                  </button>
+                </>
               )}
               <button type="button" className="full-button" onClick={() => navigateTo('/chat')}>
                 Open Elara Workspace <MessageCircle size={18} />
