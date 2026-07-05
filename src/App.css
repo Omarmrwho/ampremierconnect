@@ -969,6 +969,103 @@ textarea {
   line-height: 1.4;
 }
 
+.campaign-activity-log,
+.campaign-activity-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(19, 60, 79, 0.1);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.campaign-activity-log > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.campaign-activity-log > div strong {
+  color: #26373f;
+  font-size: 13px;
+}
+
+.campaign-activity-log article {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(19, 60, 79, 0.08);
+}
+
+.campaign-activity-log header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.campaign-activity-log header strong {
+  color: #10232b;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.campaign-activity-log header span,
+.campaign-activity-log small {
+  color: #65737a;
+  font-size: 12px;
+}
+
+.campaign-activity-log p {
+  margin: 0;
+  color: #26373f;
+  line-height: 1.42;
+}
+
+.campaign-activity-log .empty-activity-note {
+  color: #65737a;
+}
+
+.campaign-activity-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.campaign-activity-form label {
+  display: grid;
+  gap: 6px;
+  color: #65737a;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.campaign-activity-form .wide {
+  grid-column: 1 / -1;
+}
+
+.campaign-activity-form input,
+.campaign-activity-form select,
+.campaign-activity-form textarea {
+  width: 100%;
+  border: 1px solid rgba(19, 60, 79, 0.14);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #10232b;
+  background: #ffffff;
+  font: inherit;
+}
+
+.campaign-activity-form textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.campaign-activity-form button {
+  grid-column: 1 / -1;
+}
+
 .crm-detail-panel h3 {
   margin-bottom: 2px;
   color: #10232b;

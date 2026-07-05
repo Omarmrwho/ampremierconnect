@@ -145,6 +145,19 @@ alter table public.project_campaigns
   add column if not exists next_step text,
   add column if not exists proof_notes text;
 
+create table if not exists public.project_campaign_activities (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.project_session_status(id) on delete cascade,
+  campaign_id uuid references public.project_campaigns(id) on delete cascade,
+  activity_type text not null default 'touch',
+  activity_date date not null default current_date,
+  owner text,
+  outcome text,
+  next_step text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.project_ideas (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references public.project_session_status(id) on delete cascade,
@@ -174,6 +187,7 @@ alter table public.project_session_status enable row level security;
 alter table public.project_crm_records enable row level security;
 alter table public.project_tasks enable row level security;
 alter table public.project_campaigns enable row level security;
+alter table public.project_campaign_activities enable row level security;
 alter table public.project_ideas enable row level security;
 alter table public.project_agent_recommendations enable row level security;
 
@@ -348,6 +362,14 @@ with check (public.is_internal_admin());
 drop policy if exists "Internal admins can manage project campaigns" on public.project_campaigns;
 create policy "Internal admins can manage project campaigns"
 on public.project_campaigns
+for all
+to authenticated
+using (public.is_internal_admin())
+with check (public.is_internal_admin());
+
+drop policy if exists "Internal admins can manage project campaign activities" on public.project_campaign_activities;
+create policy "Internal admins can manage project campaign activities"
+on public.project_campaign_activities
 for all
 to authenticated
 using (public.is_internal_admin())

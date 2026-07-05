@@ -201,6 +201,17 @@ type ProjectCampaign = {
   recommendation: string | null
 }
 
+type ProjectCampaignActivity = {
+  id: string
+  project_id: string
+  campaign_id: string
+  activity_type: string
+  activity_date: string
+  owner: string | null
+  outcome: string | null
+  next_step: string | null
+}
+
 type ProjectIdea = {
   id: string
   project_id: string
@@ -757,6 +768,7 @@ function App() {
   const [selectedCrmRecordIds, setSelectedCrmRecordIds] = useState<string[]>([])
   const [selectedCrmRecordId, setSelectedCrmRecordId] = useState<string | null>(null)
   const [projectCampaigns, setProjectCampaigns] = useState<ProjectCampaign[]>([])
+  const [projectCampaignActivities, setProjectCampaignActivities] = useState<ProjectCampaignActivity[]>([])
   const [campaignSearch, setCampaignSearch] = useState('')
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
@@ -869,6 +881,11 @@ function App() {
     null
   const selectedCampaignBrief = selectedCampaign?.recommendation
     ? selectedCampaign.recommendation.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+    : []
+  const selectedCampaignActivities = selectedCampaign
+    ? projectCampaignActivities
+        .filter((activity) => activity.campaign_id === selectedCampaign.id)
+        .sort((left, right) => right.activity_date.localeCompare(left.activity_date))
     : []
   const selectedProjectIdeas = selectedActionProject
     ? projectIdeas.filter((idea) => idea.project_id === selectedActionProject.id)
@@ -1048,7 +1065,7 @@ function App() {
     const crmSelect =
       'id,project_id,company_name,contact_name,contact_title,email,phone,location,segment,website,source_url,campaign_name,channel,last_contacted_at,last_contact_subject,fit_reason,stage,owner,next_step,value_estimate'
     const crmFallbackSelect = 'id,project_id,company_name,contact_name,stage,owner,next_step,value_estimate'
-    const [tasksResult, crmResult, campaignsResult, ideasResult, agentsResult] = await Promise.all([
+    const [tasksResult, crmResult, campaignsResult, campaignActivitiesResult, ideasResult, agentsResult] = await Promise.all([
       supabase
         .from('project_tasks')
         .select('id,project_id,task_name,status,owner,due_date,note,sort_order')
@@ -1062,6 +1079,10 @@ function App() {
         .from('project_campaigns')
         .select('id,project_id,campaign_name,campaign_type,channel,status,objective,audience,offer,budget,launch_date,owner,next_step,proof_notes,recommendation')
         .order('created_at', { ascending: false }),
+      supabase
+        .from('project_campaign_activities')
+        .select('id,project_id,campaign_id,activity_type,activity_date,owner,outcome,next_step')
+        .order('activity_date', { ascending: false }),
       supabase
         .from('project_ideas')
         .select('id,project_id,title,score,next_move,status')
@@ -1086,6 +1107,8 @@ function App() {
           .order('created_at', { ascending: false })
       : campaignsResult
 
+    const campaignActivitiesData = campaignActivitiesResult.error ? { data: [] } : campaignActivitiesResult
+
     if (tasksResult.error || crmData.error || campaignsData.error || ideasResult.error || agentsResult.error) {
       setCommandDataStatus('Workspace records could not load. Apply the latest Supabase schema, including project_tasks.')
       return
@@ -1094,6 +1117,7 @@ function App() {
     setProjectTasks(tasksResult.data ?? [])
     setProjectCrmRecords(crmData.data ?? [])
     setProjectCampaigns(campaignsData.data ?? [])
+    setProjectCampaignActivities(campaignActivitiesData.data ?? [])
     setProjectIdeas(ideasResult.data ?? [])
     setProjectAgentRecommendations(agentsResult.data ?? [])
     setCommandDataStatus('')
@@ -1377,6 +1401,34 @@ function App() {
     event.currentTarget.reset()
     setSelectedCrmRecordIds([])
     setCommandDataStatus(`Campaign audience created from ${audienceRecords.length} CRM records.`)
+    await loadCommandRecords()
+  }
+
+  const createCampaignActivity = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedActionProject || !selectedCampaign || !supabase) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    setCommandDataStatus('Logging campaign activity...')
+    const { error } = await supabase.from('project_campaign_activities').insert({
+      project_id: selectedActionProject.id,
+      campaign_id: selectedCampaign.id,
+      activity_type: String(formData.get('activityType')) || 'touch',
+      activity_date: String(formData.get('activityDate')) || new Date().toISOString().slice(0, 10),
+      owner: String(formData.get('activityOwner')) || null,
+      outcome: String(formData.get('activityOutcome')) || null,
+      next_step: String(formData.get('activityNextStep')) || null,
+    })
+
+    if (error) {
+      setCommandDataStatus('Campaign activity could not be saved. Apply the latest campaign activity schema.')
+      return
+    }
+
+    event.currentTarget.reset()
+    setCommandDataStatus('Campaign activity logged.')
     await loadCommandRecords()
   }
 
@@ -2758,6 +2810,59 @@ function App() {
                                           <p>No audience brief captured.</p>
                                         )}
                                       </div>
+                                      <div className="campaign-activity-log">
+                                        <div>
+                                          <span className="decision-label">Activity Log</span>
+                                          <strong>{selectedCampaignActivities.length} logged</strong>
+                                        </div>
+                                        {selectedCampaignActivities.length > 0 ? (
+                                          selectedCampaignActivities.map((activity) => (
+                                            <article key={activity.id}>
+                                              <header>
+                                                <strong>{activity.activity_type}</strong>
+                                                <span>{activity.activity_date}</span>
+                                              </header>
+                                              <p>{activity.outcome || 'No outcome captured yet.'}</p>
+                                              <small>
+                                                {activity.owner || 'Unassigned'}
+                                                {activity.next_step ? ` | ${activity.next_step}` : ''}
+                                              </small>
+                                            </article>
+                                          ))
+                                        ) : (
+                                          <p className="empty-activity-note">No campaign touches, replies, launches, or results logged yet.</p>
+                                        )}
+                                      </div>
+                                      <form className="campaign-activity-form" onSubmit={createCampaignActivity}>
+                                        <label>
+                                          Activity
+                                          <select defaultValue="touch" name="activityType">
+                                            <option value="touch">Touch</option>
+                                            <option value="reply">Reply</option>
+                                            <option value="launch">Launch</option>
+                                            <option value="meeting">Meeting</option>
+                                            <option value="result">Result</option>
+                                            <option value="blocker">Blocker</option>
+                                          </select>
+                                        </label>
+                                        <label>
+                                          Date
+                                          <input defaultValue={new Date().toISOString().slice(0, 10)} name="activityDate" type="date" />
+                                        </label>
+                                        <label>
+                                          Owner
+                                          <input name="activityOwner" placeholder="Omar / Elara / agent" type="text" />
+                                        </label>
+                                        <label className="wide">
+                                          Outcome
+                                          <textarea name="activityOutcome" placeholder="What happened, what signal came back, or what was shipped." />
+                                        </label>
+                                        <label className="wide">
+                                          Next step
+                                          <textarea name="activityNextStep" placeholder="Follow-up, asset, reply, proof, or owner action." />
+                                        </label>
+                                        <button type="submit">Log Activity</button>
+                                      </form>
                                       <div className="record-actions">
                                         <button
                                           type="button"
