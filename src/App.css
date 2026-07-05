@@ -988,6 +988,7 @@ textarea {
 }
 
 .campaign-activity-log,
+.campaign-execution-form,
 .campaign-activity-form {
   display: grid;
   gap: 10px;
@@ -1047,10 +1048,12 @@ textarea {
   color: #65737a;
 }
 
+.campaign-execution-form,
 .campaign-activity-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.campaign-execution-form label,
 .campaign-activity-form label {
   display: grid;
   gap: 6px;
@@ -1059,10 +1062,14 @@ textarea {
   font-weight: 850;
 }
 
+.campaign-execution-form .wide,
 .campaign-activity-form .wide {
   grid-column: 1 / -1;
 }
 
+.campaign-execution-form input,
+.campaign-execution-form select,
+.campaign-execution-form textarea,
 .campaign-activity-form input,
 .campaign-activity-form select,
 .campaign-activity-form textarea {
@@ -1075,11 +1082,13 @@ textarea {
   font: inherit;
 }
 
+.campaign-execution-form textarea,
 .campaign-activity-form textarea {
   min-height: 72px;
   resize: vertical;
 }
 
+.campaign-execution-form button,
 .campaign-activity-form button {
   grid-column: 1 / -1;
 }

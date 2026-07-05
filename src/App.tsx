@@ -1466,6 +1466,35 @@ function App() {
     await loadCommandRecords()
   }
 
+  const updateSelectedCampaignExecution = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedCampaign || !supabase) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    setCommandDataStatus('Updating campaign execution details...')
+    const { error } = await supabase
+      .from('project_campaigns')
+      .update({
+        status: String(formData.get('campaignStatus')) || selectedCampaign.status,
+        owner: String(formData.get('campaignOwner')) || null,
+        launch_date: String(formData.get('campaignLaunchDate')) || null,
+        next_step: String(formData.get('campaignNextStep')) || null,
+        proof_notes: String(formData.get('campaignProofNotes')) || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedCampaign.id)
+
+    if (error) {
+      setCommandDataStatus('Campaign execution update failed.')
+      return
+    }
+
+    setCommandDataStatus('Campaign execution details updated.')
+    await loadCommandRecords()
+  }
+
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setAccessStatus('Saving access request...')
@@ -2875,6 +2904,43 @@ function App() {
                                           <p>No audience brief captured.</p>
                                         )}
                                       </div>
+                                      <form className="campaign-execution-form" onSubmit={updateSelectedCampaignExecution}>
+                                        <label>
+                                          Status
+                                          <select defaultValue={selectedCampaign.status} name="campaignStatus">
+                                            <option value="draft">Draft</option>
+                                            <option value="recommended">Recommended</option>
+                                            <option value="active">Active</option>
+                                            <option value="paused">Paused</option>
+                                            <option value="complete">Complete</option>
+                                          </select>
+                                        </label>
+                                        <label>
+                                          Owner
+                                          <input defaultValue={selectedCampaign.owner || ''} name="campaignOwner" placeholder="Owner" type="text" />
+                                        </label>
+                                        <label>
+                                          Launch date
+                                          <input defaultValue={selectedCampaign.launch_date || ''} name="campaignLaunchDate" type="date" />
+                                        </label>
+                                        <label className="wide">
+                                          Next step
+                                          <textarea
+                                            defaultValue={selectedCampaign.next_step || ''}
+                                            name="campaignNextStep"
+                                            placeholder="Immediate execution step."
+                                          />
+                                        </label>
+                                        <label className="wide">
+                                          Proof / results
+                                          <textarea
+                                            defaultValue={selectedCampaign.proof_notes || ''}
+                                            name="campaignProofNotes"
+                                            placeholder="Proof needed, live result notes, or signal summary."
+                                          />
+                                        </label>
+                                        <button type="submit">Update Campaign</button>
+                                      </form>
                                       <div className="campaign-activity-log">
                                         <div>
                                           <span className="decision-label">Activity Log</span>
