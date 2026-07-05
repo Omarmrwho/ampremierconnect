@@ -875,6 +875,20 @@ function App() {
       .toLowerCase()
       .includes(campaignSearchText)
   })
+  const getCampaignActivitySummary = (campaignId: string) => {
+    const activities = projectCampaignActivities
+      .filter((activity) => activity.campaign_id === campaignId)
+      .sort((left, right) => right.activity_date.localeCompare(left.activity_date))
+    const latestActivity = activities[0]
+
+    return {
+      count: activities.length,
+      latestLabel: latestActivity
+        ? `${latestActivity.activity_type} | ${latestActivity.activity_date}`
+        : 'No activity logged',
+      latestOutcome: latestActivity?.outcome || latestActivity?.next_step || '',
+    }
+  }
   const selectedCampaign =
     filteredSelectedProjectCampaigns.find((campaign) => campaign.id === selectedCampaignId) ||
     filteredSelectedProjectCampaigns[0] ||
@@ -2728,29 +2742,39 @@ function App() {
                                           <th>Campaign</th>
                                           <th>Type</th>
                                           <th>Channel</th>
+                                          <th>Activity</th>
                                           <th>Next Step</th>
                                           <th>Status</th>
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {filteredSelectedProjectCampaigns.map((campaign) => (
-                                          <tr
-                                            className={selectedCampaign?.id === campaign.id ? 'selected' : ''}
-                                            key={campaign.id}
-                                            onClick={() => setSelectedCampaignId(campaign.id)}
-                                          >
-                                            <td>
-                                              <strong>{campaign.campaign_name}</strong>
-                                              <small>{campaign.recommendation?.split(/\n/)[0] || 'No audience brief captured.'}</small>
-                                            </td>
-                                            <td>{campaign.campaign_type}</td>
-                                            <td>{campaign.channel || 'Not assigned'}</td>
-                                            <td>{campaign.next_step || campaign.objective || 'Needs execution step'}</td>
-                                            <td>
-                                              <span className="crm-stage-pill">{campaign.status}</span>
-                                            </td>
-                                          </tr>
-                                        ))}
+                                        {filteredSelectedProjectCampaigns.map((campaign) => {
+                                          const activitySummary = getCampaignActivitySummary(campaign.id)
+
+                                          return (
+                                            <tr
+                                              className={selectedCampaign?.id === campaign.id ? 'selected' : ''}
+                                              key={campaign.id}
+                                              onClick={() => setSelectedCampaignId(campaign.id)}
+                                            >
+                                              <td>
+                                                <strong>{campaign.campaign_name}</strong>
+                                                <small>{campaign.recommendation?.split(/\n/)[0] || 'No audience brief captured.'}</small>
+                                              </td>
+                                              <td>{campaign.campaign_type}</td>
+                                              <td>{campaign.channel || 'Not assigned'}</td>
+                                              <td>
+                                                <span className="campaign-activity-count">{activitySummary.count}</span>
+                                                <small>{activitySummary.latestLabel}</small>
+                                                {activitySummary.latestOutcome && <small>{activitySummary.latestOutcome}</small>}
+                                              </td>
+                                              <td>{campaign.next_step || campaign.objective || 'Needs execution step'}</td>
+                                              <td>
+                                                <span className="crm-stage-pill">{campaign.status}</span>
+                                              </td>
+                                            </tr>
+                                          )
+                                        })}
                                       </tbody>
                                     </table>
                                   </div>
