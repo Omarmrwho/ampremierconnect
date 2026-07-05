@@ -190,6 +190,14 @@ type ProjectCampaign = {
   campaign_type: string
   channel: string | null
   status: string
+  objective?: string | null
+  audience?: string | null
+  offer?: string | null
+  budget?: string | null
+  launch_date?: string | null
+  owner?: string | null
+  next_step?: string | null
+  proof_notes?: string | null
   recommendation: string | null
 }
 
@@ -842,6 +850,12 @@ function App() {
       campaign.campaign_type,
       campaign.channel,
       campaign.status,
+      campaign.objective,
+      campaign.audience,
+      campaign.offer,
+      campaign.owner,
+      campaign.next_step,
+      campaign.proof_notes,
       campaign.recommendation,
     ]
       .filter(Boolean)
@@ -1046,7 +1060,7 @@ function App() {
         .order('created_at', { ascending: false }),
       supabase
         .from('project_campaigns')
-        .select('id,project_id,campaign_name,campaign_type,channel,status,recommendation')
+        .select('id,project_id,campaign_name,campaign_type,channel,status,objective,audience,offer,budget,launch_date,owner,next_step,proof_notes,recommendation')
         .order('created_at', { ascending: false }),
       supabase
         .from('project_ideas')
@@ -1065,14 +1079,21 @@ function App() {
           .order('created_at', { ascending: false })
       : crmResult
 
-    if (tasksResult.error || crmData.error || campaignsResult.error || ideasResult.error || agentsResult.error) {
+    const campaignsData = campaignsResult.error
+      ? await supabase
+          .from('project_campaigns')
+          .select('id,project_id,campaign_name,campaign_type,channel,status,recommendation')
+          .order('created_at', { ascending: false })
+      : campaignsResult
+
+    if (tasksResult.error || crmData.error || campaignsData.error || ideasResult.error || agentsResult.error) {
       setCommandDataStatus('Workspace records could not load. Apply the latest Supabase schema, including project_tasks.')
       return
     }
 
     setProjectTasks(tasksResult.data ?? [])
     setProjectCrmRecords(crmData.data ?? [])
-    setProjectCampaigns(campaignsResult.data ?? [])
+    setProjectCampaigns(campaignsData.data ?? [])
     setProjectIdeas(ideasResult.data ?? [])
     setProjectAgentRecommendations(agentsResult.data ?? [])
     setCommandDataStatus('')
@@ -1163,6 +1184,14 @@ function App() {
         campaign_type: String(formData.get('campaignType')) || 'sales',
         channel: String(formData.get('campaignChannel')) || null,
         status: String(formData.get('campaignStatus')) || 'draft',
+        objective: String(formData.get('campaignObjective')) || null,
+        audience: String(formData.get('campaignAudience')) || null,
+        offer: String(formData.get('campaignOffer')) || null,
+        budget: String(formData.get('campaignBudget')) || null,
+        launch_date: String(formData.get('campaignLaunchDate')) || null,
+        owner: String(formData.get('campaignOwner')) || null,
+        next_step: String(formData.get('campaignNextStep')) || null,
+        proof_notes: String(formData.get('campaignProofNotes')) || null,
         recommendation: String(formData.get('campaignRecommendation')) || null,
       },
       project_ideas: {
@@ -1195,6 +1224,19 @@ function App() {
         value_estimate: String(formData.get('crmValue')) || null,
       }
       ;({ error } = await supabase.from(table).insert(crmFallbackPayload))
+    }
+
+    if (error && table === 'project_campaigns') {
+      const campaignFallbackPayload = {
+        project_id: selectedActionProject.id,
+        updated_at: new Date().toISOString(),
+        campaign_name: String(formData.get('campaignName')),
+        campaign_type: String(formData.get('campaignType')) || 'sales',
+        channel: String(formData.get('campaignChannel')) || null,
+        status: String(formData.get('campaignStatus')) || 'draft',
+        recommendation: String(formData.get('campaignRecommendation')) || null,
+      }
+      ;({ error } = await supabase.from(table).insert(campaignFallbackPayload))
     }
 
     if (error) {
@@ -1296,15 +1338,36 @@ function App() {
       .join('\n')
 
     setCommandDataStatus(`Creating campaign audience from ${audienceRecords.length} CRM records...`)
-    const { error } = await supabase.from('project_campaigns').insert({
+    const campaignPayload = {
       project_id: selectedActionProject.id,
       campaign_name: String(formData.get('campaignName')),
       campaign_type: String(formData.get('campaignType')) || 'marketing',
       channel: String(formData.get('campaignChannel')) || null,
       status: 'draft',
+      objective: String(formData.get('campaignObjective')) || null,
+      audience: `${audienceRecords.length} selected CRM records`,
+      offer: String(formData.get('campaignOffer')) || null,
+      owner: String(formData.get('campaignOwner')) || null,
+      next_step: String(formData.get('campaignNextStep')) || null,
+      proof_notes: String(formData.get('campaignProofNotes')) || null,
       recommendation,
       updated_at: new Date().toISOString(),
-    })
+    }
+
+    let { error } = await supabase.from('project_campaigns').insert(campaignPayload)
+
+    if (error) {
+      const campaignFallbackPayload = {
+        project_id: selectedActionProject.id,
+        campaign_name: String(formData.get('campaignName')),
+        campaign_type: String(formData.get('campaignType')) || 'marketing',
+        channel: String(formData.get('campaignChannel')) || null,
+        status: 'draft',
+        recommendation,
+        updated_at: new Date().toISOString(),
+      }
+      ;({ error } = await supabase.from('project_campaigns').insert(campaignFallbackPayload))
+    }
 
     if (error) {
       setCommandDataStatus('Campaign could not be created from the selected CRM records.')
@@ -1796,9 +1859,29 @@ function App() {
                     Channel
                     <input name="campaignChannel" placeholder="Facebook, LinkedIn, email, calls" type="text" />
                   </label>
+                  <label>
+                    Objective
+                    <input name="campaignObjective" placeholder="Book meetings, validate offer, collect proof" type="text" />
+                  </label>
+                  <label>
+                    Offer
+                    <input name="campaignOffer" placeholder="Site assessment, proof packet, consultation" type="text" />
+                  </label>
+                  <label>
+                    Owner
+                    <input name="campaignOwner" placeholder="Elara / Omar / sales agent" type="text" />
+                  </label>
+                  <label>
+                    Next step
+                    <input name="campaignNextStep" placeholder="Build ad, draft sequence, call top 20" type="text" />
+                  </label>
                   <label className="wide">
                     Launch note
                     <textarea name="campaignRecommendation" placeholder="Offer, angle, asset, proof point, or next execution step." />
+                  </label>
+                  <label className="wide">
+                    Proof notes
+                    <textarea name="campaignProofNotes" placeholder="Proof needed, evidence captured, results to track." />
                   </label>
                   <button type="submit" disabled={selectedVisibleCrmRecordIds.length === 0}>
                     Create Campaign
@@ -2593,6 +2676,7 @@ function App() {
                                           <th>Campaign</th>
                                           <th>Type</th>
                                           <th>Channel</th>
+                                          <th>Next Step</th>
                                           <th>Status</th>
                                         </tr>
                                       </thead>
@@ -2609,6 +2693,7 @@ function App() {
                                             </td>
                                             <td>{campaign.campaign_type}</td>
                                             <td>{campaign.channel || 'Not assigned'}</td>
+                                            <td>{campaign.next_step || campaign.objective || 'Needs execution step'}</td>
                                             <td>
                                               <span className="crm-stage-pill">{campaign.status}</span>
                                             </td>
@@ -2631,7 +2716,41 @@ function App() {
                                           <dt>Channel</dt>
                                           <dd>{selectedCampaign.channel || 'Not assigned'}</dd>
                                         </div>
+                                        <div>
+                                          <dt>Owner</dt>
+                                          <dd>{selectedCampaign.owner || 'Unassigned'}</dd>
+                                        </div>
+                                        <div>
+                                          <dt>Launch</dt>
+                                          <dd>{selectedCampaign.launch_date || 'Not scheduled'}</dd>
+                                        </div>
+                                        <div>
+                                          <dt>Budget</dt>
+                                          <dd>{selectedCampaign.budget || 'Not set'}</dd>
+                                        </div>
+                                        <div>
+                                          <dt>Objective</dt>
+                                          <dd>{selectedCampaign.objective || 'No objective captured'}</dd>
+                                        </div>
+                                        <div>
+                                          <dt>Audience</dt>
+                                          <dd>{selectedCampaign.audience || 'Audience is in the brief'}</dd>
+                                        </div>
+                                        <div>
+                                          <dt>Offer</dt>
+                                          <dd>{selectedCampaign.offer || 'No offer captured'}</dd>
+                                        </div>
+                                        <div>
+                                          <dt>Next Step</dt>
+                                          <dd>{selectedCampaign.next_step || 'No next step assigned'}</dd>
+                                        </div>
                                       </dl>
+                                      {selectedCampaign.proof_notes && (
+                                        <div className="campaign-proof-notes">
+                                          <span>Proof / Results</span>
+                                          <p>{selectedCampaign.proof_notes}</p>
+                                        </div>
+                                      )}
                                       <div className="campaign-brief-list">
                                         {selectedCampaignBrief.length > 0 ? (
                                           selectedCampaignBrief.map((line) => <p key={line}>{line}</p>)
@@ -2696,6 +2815,10 @@ function App() {
                             <input name="campaignChannel" placeholder="Email, calls, LinkedIn, ads" type="text" />
                           </label>
                           <label>
+                            Owner
+                            <input name="campaignOwner" placeholder="Omar / Elara / sales agent" type="text" />
+                          </label>
+                          <label>
                             Status
                             <select defaultValue="draft" name="campaignStatus">
                               <option value="draft">Draft</option>
@@ -2704,9 +2827,37 @@ function App() {
                               <option value="complete">Complete</option>
                             </select>
                           </label>
+                          <label>
+                            Launch date
+                            <input name="campaignLaunchDate" type="date" />
+                          </label>
+                          <label>
+                            Budget
+                            <input name="campaignBudget" placeholder="$500 test / TBD" type="text" />
+                          </label>
+                          <label className="wide">
+                            Objective
+                            <textarea name="campaignObjective" placeholder="What this campaign must prove or produce." />
+                          </label>
+                          <label className="wide">
+                            Audience
+                            <textarea name="campaignAudience" placeholder="Who this is for and what CRM segment it targets." />
+                          </label>
+                          <label className="wide">
+                            Offer
+                            <textarea name="campaignOffer" placeholder="Primary offer, hook, call to action, or proof-of-concept angle." />
+                          </label>
+                          <label className="wide">
+                            Next step
+                            <textarea name="campaignNextStep" placeholder="Immediate execution move, owner action, or asset to create." />
+                          </label>
                           <label className="wide">
                             Recommendation
                             <textarea name="campaignRecommendation" placeholder="Audience, offer, message, and next execution step." />
+                          </label>
+                          <label className="wide">
+                            Proof / results notes
+                            <textarea name="campaignProofNotes" placeholder="Proof needed, live result notes, conversion signals, or attribution notes." />
                           </label>
                           <button type="submit">Add Campaign</button>
                         </form>
