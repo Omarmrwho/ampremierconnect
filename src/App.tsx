@@ -162,6 +162,18 @@ type ProjectCrmRecord = {
   project_id: string
   company_name: string
   contact_name: string | null
+  contact_title?: string | null
+  email?: string | null
+  phone?: string | null
+  location?: string | null
+  segment?: string | null
+  website?: string | null
+  source_url?: string | null
+  campaign_name?: string | null
+  channel?: string | null
+  last_contacted_at?: string | null
+  last_contact_subject?: string | null
+  fit_reason?: string | null
   stage: string
   owner: string | null
   next_step: string | null
@@ -668,15 +680,17 @@ const getCrmField = (details: string | null, label: string) => {
 
 const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
   const details = record.next_step || ''
-  const email = getCrmField(details, 'Email')
-  const phone = getCrmField(details, 'Phone')
-  const location = getCrmField(details, 'Location')
-  const segment = getCrmField(details, 'Segment')
-  const website = getCrmField(details, 'Website')
-  const source = getCrmField(details, 'Source')
-  const whyFit = getCrmField(details, 'Why fit')
-  const campaign = getCrmField(details, 'Campaign')
-  const sent = getCrmField(details, 'Sent')
+  const email = record.email || getCrmField(details, 'Email')
+  const phone = record.phone || getCrmField(details, 'Phone')
+  const location = record.location || getCrmField(details, 'Location')
+  const segment = record.segment || getCrmField(details, 'Segment')
+  const website = record.website || getCrmField(details, 'Website')
+  const source = record.source_url || getCrmField(details, 'Source')
+  const whyFit = record.fit_reason || getCrmField(details, 'Why fit')
+  const campaign = record.campaign_name || getCrmField(details, 'Campaign')
+  const sent = record.last_contacted_at
+    ? `${record.last_contacted_at.slice(0, 10)}${record.last_contact_subject ? ` | ${record.last_contact_subject}` : ''}`
+    : getCrmField(details, 'Sent')
   const extraRoutes = getCrmField(details, 'Additional sends/routes')
   const manualNextStep =
     details && !email && !phone && !location && !segment && !website && !source && !whyFit && !campaign && !sent
@@ -961,6 +975,9 @@ function App() {
     }
 
     setCommandDataStatus('Loading project workspace records...')
+    const crmSelect =
+      'id,project_id,company_name,contact_name,contact_title,email,phone,location,segment,website,source_url,campaign_name,channel,last_contacted_at,last_contact_subject,fit_reason,stage,owner,next_step,value_estimate'
+    const crmFallbackSelect = 'id,project_id,company_name,contact_name,stage,owner,next_step,value_estimate'
     const [tasksResult, crmResult, campaignsResult, ideasResult, agentsResult] = await Promise.all([
       supabase
         .from('project_tasks')
@@ -969,7 +986,7 @@ function App() {
         .order('created_at', { ascending: true }),
       supabase
         .from('project_crm_records')
-        .select('id,project_id,company_name,contact_name,stage,owner,next_step,value_estimate')
+        .select(crmSelect)
         .order('created_at', { ascending: false }),
       supabase
         .from('project_campaigns')
@@ -985,13 +1002,20 @@ function App() {
         .order('created_at', { ascending: false }),
     ])
 
-    if (tasksResult.error || crmResult.error || campaignsResult.error || ideasResult.error || agentsResult.error) {
+    const crmData = crmResult.error
+      ? await supabase
+          .from('project_crm_records')
+          .select(crmFallbackSelect)
+          .order('created_at', { ascending: false })
+      : crmResult
+
+    if (tasksResult.error || crmData.error || campaignsResult.error || ideasResult.error || agentsResult.error) {
       setCommandDataStatus('Workspace records could not load. Apply the latest Supabase schema, including project_tasks.')
       return
     }
 
     setProjectTasks(tasksResult.data ?? [])
-    setProjectCrmRecords(crmResult.data ?? [])
+    setProjectCrmRecords(crmData.data ?? [])
     setProjectCampaigns(campaignsResult.data ?? [])
     setProjectIdeas(ideasResult.data ?? [])
     setProjectAgentRecommendations(agentsResult.data ?? [])
@@ -1062,6 +1086,16 @@ function App() {
         ...baseRecord,
         company_name: String(formData.get('companyName')),
         contact_name: String(formData.get('contactName')) || null,
+        contact_title: String(formData.get('contactTitle')) || null,
+        email: String(formData.get('crmEmail')) || null,
+        phone: String(formData.get('crmPhone')) || null,
+        location: String(formData.get('crmLocation')) || null,
+        segment: String(formData.get('crmSegment')) || null,
+        website: String(formData.get('crmWebsite')) || null,
+        source_url: String(formData.get('crmSource')) || null,
+        campaign_name: String(formData.get('crmCampaign')) || null,
+        channel: String(formData.get('crmChannel')) || null,
+        fit_reason: String(formData.get('crmFitReason')) || null,
         stage: String(formData.get('crmStage')) || 'qualification',
         owner: String(formData.get('crmOwner')) || null,
         next_step: String(formData.get('crmNextStep')) || null,
@@ -1091,7 +1125,21 @@ function App() {
       },
     }
 
-    const { error } = await supabase.from(table).insert(payloadByTable[table])
+    let { error } = await supabase.from(table).insert(payloadByTable[table])
+
+    if (error && table === 'project_crm_records') {
+      const crmFallbackPayload = {
+        project_id: selectedActionProject.id,
+        updated_at: new Date().toISOString(),
+        company_name: String(formData.get('companyName')),
+        contact_name: String(formData.get('contactName')) || null,
+        stage: String(formData.get('crmStage')) || 'qualification',
+        owner: String(formData.get('crmOwner')) || null,
+        next_step: String(formData.get('crmNextStep')) || null,
+        value_estimate: String(formData.get('crmValue')) || null,
+      }
+      ;({ error } = await supabase.from(table).insert(crmFallbackPayload))
+    }
 
     if (error) {
       setCommandDataStatus('Record could not be saved. Confirm internal workspace policies are active.')
@@ -1596,15 +1644,26 @@ function App() {
                             </div>
                             <div>
                               <dt>Contact</dt>
-                              <dd>{selectedCrmRecord.contact_name || 'Routing contact'}</dd>
+                              <dd>
+                                {selectedCrmRecord.contact_name || 'Routing contact'}
+                                {selectedCrmRecord.contact_title ? `, ${selectedCrmRecord.contact_title}` : ''}
+                              </dd>
                             </div>
                             <div>
                               <dt>Location</dt>
                               <dd>{selectedCrmRecord.location || 'Not captured'}</dd>
                             </div>
                             <div>
+                              <dt>Segment</dt>
+                              <dd>{selectedCrmRecord.segment || 'Not categorized'}</dd>
+                            </div>
+                            <div>
                               <dt>Campaign</dt>
                               <dd>{selectedCrmRecord.campaign || 'Manual CRM record'}</dd>
+                            </div>
+                            <div>
+                              <dt>Channel</dt>
+                              <dd>{selectedCrmRecord.channel || 'Direct outreach'}</dd>
                             </div>
                             <div>
                               <dt>Sent</dt>
@@ -1653,6 +1712,26 @@ function App() {
                     <input name="contactName" placeholder="Decision maker" type="text" />
                   </label>
                   <label>
+                    Title
+                    <input name="contactTitle" placeholder="Owner / GM / facilities" type="text" />
+                  </label>
+                  <label>
+                    Email
+                    <input name="crmEmail" placeholder="name@company.com" type="email" />
+                  </label>
+                  <label>
+                    Phone
+                    <input name="crmPhone" placeholder="Main or direct line" type="tel" />
+                  </label>
+                  <label>
+                    Location
+                    <input name="crmLocation" placeholder="City, state, region" type="text" />
+                  </label>
+                  <label>
+                    Segment
+                    <input name="crmSegment" placeholder="Hotel / airport / hospital" type="text" />
+                  </label>
+                  <label>
                     Stage
                     <input name="crmStage" placeholder="Qualification / proposal / follow-up" type="text" />
                   </label>
@@ -1663,6 +1742,26 @@ function App() {
                   <label>
                     Value
                     <input name="crmValue" placeholder="$ amount or TBD" type="text" />
+                  </label>
+                  <label>
+                    Campaign
+                    <input name="crmCampaign" placeholder="Outreach campaign name" type="text" />
+                  </label>
+                  <label>
+                    Channel
+                    <input name="crmChannel" placeholder="Email / Facebook / social" type="text" />
+                  </label>
+                  <label>
+                    Website
+                    <input name="crmWebsite" placeholder="Company website" type="url" />
+                  </label>
+                  <label>
+                    Source
+                    <input name="crmSource" placeholder="Research/source URL" type="url" />
+                  </label>
+                  <label className="wide">
+                    Why it fits
+                    <textarea name="crmFitReason" placeholder="Why this company belongs in this pipeline." />
                   </label>
                   <label className="wide">
                     Next step

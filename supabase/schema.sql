@@ -68,6 +68,18 @@ create table if not exists public.project_crm_records (
   project_id uuid references public.project_session_status(id) on delete cascade,
   company_name text not null,
   contact_name text,
+  contact_title text,
+  email text,
+  phone text,
+  location text,
+  segment text,
+  website text,
+  source_url text,
+  campaign_name text,
+  channel text,
+  last_contacted_at timestamptz,
+  last_contact_subject text,
+  fit_reason text,
   stage text not null default 'qualification',
   owner text,
   next_step text,
@@ -75,6 +87,20 @@ create table if not exists public.project_crm_records (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.project_crm_records
+  add column if not exists contact_title text,
+  add column if not exists email text,
+  add column if not exists phone text,
+  add column if not exists location text,
+  add column if not exists segment text,
+  add column if not exists website text,
+  add column if not exists source_url text,
+  add column if not exists campaign_name text,
+  add column if not exists channel text,
+  add column if not exists last_contacted_at timestamptz,
+  add column if not exists last_contact_subject text,
+  add column if not exists fit_reason text;
 
 create table if not exists public.project_tasks (
   id uuid primary key default gen_random_uuid(),
