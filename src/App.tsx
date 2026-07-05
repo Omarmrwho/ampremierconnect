@@ -749,6 +749,8 @@ function App() {
   const [selectedCrmRecordIds, setSelectedCrmRecordIds] = useState<string[]>([])
   const [selectedCrmRecordId, setSelectedCrmRecordId] = useState<string | null>(null)
   const [projectCampaigns, setProjectCampaigns] = useState<ProjectCampaign[]>([])
+  const [campaignSearch, setCampaignSearch] = useState('')
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
   const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
@@ -828,6 +830,31 @@ function App() {
   const selectedProjectContactCount = parsedSelectedProjectCrmRecords.filter((record) => record.email || record.phone).length
   const selectedProjectCampaigns = selectedActionProject
     ? projectCampaigns.filter((campaign) => campaign.project_id === selectedActionProject.id)
+    : []
+  const campaignSearchText = campaignSearch.trim().toLowerCase()
+  const filteredSelectedProjectCampaigns = selectedProjectCampaigns.filter((campaign) => {
+    if (!campaignSearchText) {
+      return true
+    }
+
+    return [
+      campaign.campaign_name,
+      campaign.campaign_type,
+      campaign.channel,
+      campaign.status,
+      campaign.recommendation,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(campaignSearchText)
+  })
+  const selectedCampaign =
+    filteredSelectedProjectCampaigns.find((campaign) => campaign.id === selectedCampaignId) ||
+    filteredSelectedProjectCampaigns[0] ||
+    null
+  const selectedCampaignBrief = selectedCampaign?.recommendation
+    ? selectedCampaign.recommendation.split(/\n+/).map((line) => line.trim()).filter(Boolean)
     : []
   const selectedProjectIdeas = selectedActionProject
     ? projectIdeas.filter((idea) => idea.project_id === selectedActionProject.id)
@@ -940,7 +967,9 @@ function App() {
   useEffect(() => {
     setSelectedCrmRecordId(null)
     setSelectedCrmRecordIds([])
+    setSelectedCampaignId(null)
     setCrmSearch('')
+    setCampaignSearch('')
     setCrmStageFilter('all')
     setCrmSegmentFilter('all')
     setCrmCampaignFilter('all')
@@ -2530,49 +2559,121 @@ function App() {
                             Generate Campaign
                           </button>
                         </div>
-                        <div className="campaign-grid">
-                          {(selectedProjectCampaigns.length > 0
-                            ? selectedProjectCampaigns.map((campaign) => ({
-                                id: campaign.id,
-                                name: campaign.campaign_name,
-                                channel: `${campaign.campaign_type}${campaign.channel ? ` / ${campaign.channel}` : ''}`,
-                                status: campaign.status,
-                                recommendation: campaign.recommendation || 'No recommendation captured.',
-                                persisted: true,
-                              }))
-                            : selectedWorkspace.campaigns.map((campaign) => ({
-                                ...campaign,
-                                id: campaign.name,
-                                persisted: false,
-                              }))
-                          ).map((campaign) => (
-                            <article className="campaign-card" key={campaign.id}>
-                              <div>
-                                <Megaphone size={18} />
-                                <span>{campaign.status}</span>
-                              </div>
-                              <h3>{campaign.name}</h3>
-                              <small>{campaign.channel}</small>
-                              <p>{campaign.recommendation}</p>
-                              {campaign.persisted && (
-                                <div className="record-actions">
-                                  <button
-                                    type="button"
-                                    onClick={() => updateCommandRecordStatus('project_campaigns', campaign.id, 'active')}
-                                  >
-                                    Active
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateCommandRecordStatus('project_campaigns', campaign.id, 'complete')}
-                                  >
-                                    Done
-                                  </button>
-                                </div>
+                        {selectedProjectCampaigns.length > 0 ? (
+                          <>
+                            <div className="crm-toolbar campaign-toolbar" aria-label="Campaign filters">
+                              <label>
+                                <Filter size={16} />
+                                <input
+                                  value={campaignSearch}
+                                  onChange={(event) => setCampaignSearch(event.target.value)}
+                                  placeholder="Search campaign, channel, audience, status..."
+                                  type="search"
+                                />
+                              </label>
+                              <span>
+                                Showing {filteredSelectedProjectCampaigns.length} of {selectedProjectCampaigns.length}
+                              </span>
+                            </div>
+                            <div className="campaign-workbench">
+                              {filteredSelectedProjectCampaigns.length === 0 ? (
+                                <article className="empty-project-state">
+                                  <Filter size={22} />
+                                  <div>
+                                    <h3>No matching campaigns.</h3>
+                                    <p>Clear the search or try an audience, channel, status, or campaign name.</p>
+                                  </div>
+                                </article>
+                              ) : (
+                                <>
+                                  <div className="campaign-table-wrap">
+                                    <table className="campaign-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Campaign</th>
+                                          <th>Type</th>
+                                          <th>Channel</th>
+                                          <th>Status</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {filteredSelectedProjectCampaigns.map((campaign) => (
+                                          <tr
+                                            className={selectedCampaign?.id === campaign.id ? 'selected' : ''}
+                                            key={campaign.id}
+                                            onClick={() => setSelectedCampaignId(campaign.id)}
+                                          >
+                                            <td>
+                                              <strong>{campaign.campaign_name}</strong>
+                                              <small>{campaign.recommendation?.split(/\n/)[0] || 'No audience brief captured.'}</small>
+                                            </td>
+                                            <td>{campaign.campaign_type}</td>
+                                            <td>{campaign.channel || 'Not assigned'}</td>
+                                            <td>
+                                              <span className="crm-stage-pill">{campaign.status}</span>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+
+                                  {selectedCampaign && (
+                                    <aside className="campaign-detail-panel" aria-label="Selected campaign details">
+                                      <span className="decision-label">{selectedCampaign.status}</span>
+                                      <h3>{selectedCampaign.campaign_name}</h3>
+                                      <dl>
+                                        <div>
+                                          <dt>Type</dt>
+                                          <dd>{selectedCampaign.campaign_type}</dd>
+                                        </div>
+                                        <div>
+                                          <dt>Channel</dt>
+                                          <dd>{selectedCampaign.channel || 'Not assigned'}</dd>
+                                        </div>
+                                      </dl>
+                                      <div className="campaign-brief-list">
+                                        {selectedCampaignBrief.length > 0 ? (
+                                          selectedCampaignBrief.map((line) => <p key={line}>{line}</p>)
+                                        ) : (
+                                          <p>No audience brief captured.</p>
+                                        )}
+                                      </div>
+                                      <div className="record-actions">
+                                        <button
+                                          type="button"
+                                          onClick={() => updateCommandRecordStatus('project_campaigns', selectedCampaign.id, 'active')}
+                                        >
+                                          Active
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => updateCommandRecordStatus('project_campaigns', selectedCampaign.id, 'complete')}
+                                        >
+                                          Done
+                                        </button>
+                                      </div>
+                                    </aside>
+                                  )}
+                                </>
                               )}
-                            </article>
-                          ))}
-                        </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="campaign-grid">
+                            {selectedWorkspace.campaigns.map((campaign) => (
+                              <article className="campaign-card" key={campaign.name}>
+                                <div>
+                                  <Megaphone size={18} />
+                                  <span>{campaign.status}</span>
+                                </div>
+                                <h3>{campaign.name}</h3>
+                                <small>{campaign.channel}</small>
+                                <p>{campaign.recommendation}</p>
+                              </article>
+                            ))}
+                          </div>
+                        )}
                         <form
                           className="ops-form-grid compact"
                           onSubmit={(event) => createCommandRecord(event, 'project_campaigns')}
