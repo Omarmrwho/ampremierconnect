@@ -802,6 +802,7 @@ function App() {
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
   const isCrmRoute = routePath === '/crm'
+  const isProposalsRoute = routePath === '/proposals'
   const isChatRoute = routePath === '/chat'
   const operatingProjects = useMemo(
     () => [
@@ -1030,15 +1031,23 @@ function App() {
     if (isCrmRoute) {
       setWorkspaceTab('crm')
     }
-  }, [isCrmRoute])
+    if (isProposalsRoute) {
+      setWorkspaceTab('proposals')
+    }
+  }, [isCrmRoute, isProposalsRoute])
 
   useEffect(() => {
-    if (!isInternal || (!isCommandRoute && !isCrmRoute) || selectedActionProjectId || operatingProjects.length === 0) {
+    if (
+      !isInternal ||
+      (!isCommandRoute && !isCrmRoute && !isProposalsRoute) ||
+      selectedActionProjectId ||
+      operatingProjects.length === 0
+    ) {
       return
     }
 
     setSelectedActionProjectId(operatingProjects[0].id)
-  }, [isInternal, isCommandRoute, isCrmRoute, selectedActionProjectId, operatingProjects])
+  }, [isInternal, isCommandRoute, isCrmRoute, isProposalsRoute, selectedActionProjectId, operatingProjects])
 
   useEffect(() => {
     if (!selectedActionProjectId) {
@@ -1838,6 +1847,9 @@ function App() {
             <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
               CRM
             </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
+              Proposals
+            </button>
             {session && (
               <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
                 <LogOut size={18} />
@@ -2311,7 +2323,7 @@ function App() {
     )
   }
 
-  if (isCommandRoute) {
+  if (isCommandRoute || isProposalsRoute) {
     return (
       <main className="portal-shell command-page-shell">
         <nav className="topbar" aria-label="Command portal navigation">
@@ -2336,6 +2348,9 @@ function App() {
             </button>
             <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
               CRM
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
+              Proposals
             </button>
             {session && (
               <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
