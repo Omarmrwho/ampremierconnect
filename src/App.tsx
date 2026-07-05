@@ -110,8 +110,11 @@ const readinessItems = [
 ]
 
 const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as const
+const crmGapFilters = ['all', 'missing-phone', 'missing-source', 'missing-fit'] as const
+const crmBulkStages = ['follow-up', 'qualified', 'proposal', 'won', 'dead'] as const
 
 type ProjectFilter = (typeof projectFilters)[number]
+type CrmGapFilter = (typeof crmGapFilters)[number]
 type ProjectOperatingStatus = ProjectSessionStatus['status']
 type WorkspaceTab = 'command' | 'construction' | 'crm' | 'campaigns' | 'ideas' | 'agents'
 
@@ -739,6 +742,11 @@ function App() {
   const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([])
   const [projectCrmRecords, setProjectCrmRecords] = useState<ProjectCrmRecord[]>([])
   const [crmSearch, setCrmSearch] = useState('')
+  const [crmStageFilter, setCrmStageFilter] = useState('all')
+  const [crmSegmentFilter, setCrmSegmentFilter] = useState('all')
+  const [crmCampaignFilter, setCrmCampaignFilter] = useState('all')
+  const [crmGapFilter, setCrmGapFilter] = useState<CrmGapFilter>('all')
+  const [selectedCrmRecordIds, setSelectedCrmRecordIds] = useState<string[]>([])
   const [selectedCrmRecordId, setSelectedCrmRecordId] = useState<string | null>(null)
   const [projectCampaigns, setProjectCampaigns] = useState<ProjectCampaign[]>([])
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
@@ -778,26 +786,40 @@ function App() {
     ? projectCrmRecords.filter((record) => record.project_id === selectedActionProject.id)
     : []
   const parsedSelectedProjectCrmRecords = selectedProjectCrmRecords.map(parseCrmRecord)
+  const crmFilterOptions = {
+    stages: ['all', ...Array.from(new Set(parsedSelectedProjectCrmRecords.map((record) => record.stage).filter(Boolean))).sort()],
+    segments: ['all', ...Array.from(new Set(parsedSelectedProjectCrmRecords.map((record) => record.segment).filter(Boolean))).sort()],
+    campaigns: ['all', ...Array.from(new Set(parsedSelectedProjectCrmRecords.map((record) => record.campaign).filter(Boolean))).sort()],
+  }
   const crmSearchText = crmSearch.trim().toLowerCase()
-  const filteredSelectedProjectCrmRecords = crmSearchText
-    ? parsedSelectedProjectCrmRecords.filter((record) =>
-        [
-          record.company_name,
-          record.contact_name,
-          record.stage,
-          record.email,
-          record.phone,
-          record.location,
-          record.segment,
-          record.campaign,
-          record.whyFit,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(crmSearchText),
-      )
-    : parsedSelectedProjectCrmRecords
+  const filteredSelectedProjectCrmRecords = parsedSelectedProjectCrmRecords.filter((record) => {
+    const searchableText = [
+      record.company_name,
+      record.contact_name,
+      record.stage,
+      record.email,
+      record.phone,
+      record.location,
+      record.segment,
+      record.campaign,
+      record.whyFit,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+    const matchesSearch = crmSearchText ? searchableText.includes(crmSearchText) : true
+    const matchesStage = crmStageFilter === 'all' || record.stage === crmStageFilter
+    const matchesSegment = crmSegmentFilter === 'all' || record.segment === crmSegmentFilter
+    const matchesCampaign = crmCampaignFilter === 'all' || record.campaign === crmCampaignFilter
+    const matchesGap =
+      crmGapFilter === 'all' ||
+      (crmGapFilter === 'missing-phone' && !record.phone) ||
+      (crmGapFilter === 'missing-source' && !record.source && !record.website) ||
+      (crmGapFilter === 'missing-fit' && !record.whyFit)
+    return matchesSearch && matchesStage && matchesSegment && matchesCampaign && matchesGap
+  })
+  const visibleCrmRecordIds = filteredSelectedProjectCrmRecords.map((record) => record.id)
+  const selectedVisibleCrmRecordIds = selectedCrmRecordIds.filter((id) => visibleCrmRecordIds.includes(id))
   const selectedCrmRecord =
     filteredSelectedProjectCrmRecords.find((record) => record.id === selectedCrmRecordId) ||
     filteredSelectedProjectCrmRecords[0] ||
@@ -917,7 +939,12 @@ function App() {
 
   useEffect(() => {
     setSelectedCrmRecordId(null)
+    setSelectedCrmRecordIds([])
     setCrmSearch('')
+    setCrmStageFilter('all')
+    setCrmSegmentFilter('all')
+    setCrmCampaignFilter('all')
+    setCrmGapFilter('all')
   }, [selectedActionProjectId])
 
   const navigateTo = (path: string) => {
@@ -1169,6 +1196,47 @@ function App() {
     }
 
     setCommandDataStatus('Status updated.')
+    await loadCommandRecords()
+  }
+
+  const toggleCrmRecordSelection = (id: string) => {
+    setSelectedCrmRecordIds((currentIds) =>
+      currentIds.includes(id) ? currentIds.filter((currentId) => currentId !== id) : [...currentIds, id],
+    )
+  }
+
+  const toggleVisibleCrmSelection = () => {
+    setSelectedCrmRecordIds((currentIds) => {
+      const visibleSet = new Set(visibleCrmRecordIds)
+      const hasEveryVisibleRecord =
+        visibleCrmRecordIds.length > 0 && visibleCrmRecordIds.every((id) => currentIds.includes(id))
+
+      if (hasEveryVisibleRecord) {
+        return currentIds.filter((id) => !visibleSet.has(id))
+      }
+
+      return Array.from(new Set([...currentIds, ...visibleCrmRecordIds]))
+    })
+  }
+
+  const updateSelectedCrmRecordsStage = async (stage: string) => {
+    if (!supabase || selectedVisibleCrmRecordIds.length === 0) {
+      return
+    }
+
+    setCommandDataStatus(`Updating ${selectedVisibleCrmRecordIds.length} CRM records...`)
+    const { error } = await supabase
+      .from('project_crm_records')
+      .update({ stage, updated_at: new Date().toISOString() })
+      .in('id', selectedVisibleCrmRecordIds)
+
+    if (error) {
+      setCommandDataStatus('Bulk CRM update failed.')
+      return
+    }
+
+    setCommandDataStatus(`${selectedVisibleCrmRecordIds.length} CRM records moved to ${stage}.`)
+    setSelectedCrmRecordIds([])
     await loadCommandRecords()
   }
 
@@ -1570,6 +1638,65 @@ function App() {
                     Showing {filteredSelectedProjectCrmRecords.length} of {selectedProjectCrmRecords.length}
                   </span>
                 </div>
+                <div className="crm-filter-grid" aria-label="CRM structured filters">
+                  <label>
+                    Stage
+                    <select value={crmStageFilter} onChange={(event) => setCrmStageFilter(event.target.value)}>
+                      {crmFilterOptions.stages.map((stage) => (
+                        <option key={stage} value={stage}>
+                          {stage === 'all' ? 'All stages' : stage}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Segment
+                    <select value={crmSegmentFilter} onChange={(event) => setCrmSegmentFilter(event.target.value)}>
+                      {crmFilterOptions.segments.map((segment) => (
+                        <option key={segment} value={segment}>
+                          {segment === 'all' ? 'All segments' : segment}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Campaign
+                    <select value={crmCampaignFilter} onChange={(event) => setCrmCampaignFilter(event.target.value)}>
+                      {crmFilterOptions.campaigns.map((campaign) => (
+                        <option key={campaign} value={campaign}>
+                          {campaign === 'all' ? 'All campaigns' : campaign}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Data gaps
+                    <select value={crmGapFilter} onChange={(event) => setCrmGapFilter(event.target.value as CrmGapFilter)}>
+                      <option value="all">All records</option>
+                      <option value="missing-phone">Missing phone</option>
+                      <option value="missing-source">Missing source</option>
+                      <option value="missing-fit">Missing fit reason</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="crm-bulk-bar" aria-label="CRM bulk actions">
+                  <span>{selectedVisibleCrmRecordIds.length} selected</span>
+                  <button type="button" onClick={toggleVisibleCrmSelection} disabled={visibleCrmRecordIds.length === 0}>
+                    {selectedVisibleCrmRecordIds.length === visibleCrmRecordIds.length && visibleCrmRecordIds.length > 0
+                      ? 'Clear visible'
+                      : 'Select visible'}
+                  </button>
+                  {crmBulkStages.map((stage) => (
+                    <button
+                      type="button"
+                      key={stage}
+                      onClick={() => updateSelectedCrmRecordsStage(stage)}
+                      disabled={selectedVisibleCrmRecordIds.length === 0}
+                    >
+                      Move to {stage}
+                    </button>
+                  ))}
+                </div>
 
                 <div className="crm-record-workbench">
                   {selectedProjectCrmRecords.length === 0 ? (
@@ -1594,6 +1721,17 @@ function App() {
                         <table className="crm-table">
                           <thead>
                             <tr>
+                              <th>
+                                <input
+                                  aria-label="Select visible CRM records"
+                                  checked={
+                                    visibleCrmRecordIds.length > 0 &&
+                                    selectedVisibleCrmRecordIds.length === visibleCrmRecordIds.length
+                                  }
+                                  onChange={toggleVisibleCrmSelection}
+                                  type="checkbox"
+                                />
+                              </th>
                               <th>Company</th>
                               <th>Contact</th>
                               <th>Segment</th>
@@ -1609,6 +1747,15 @@ function App() {
                                 key={record.id}
                                 onClick={() => setSelectedCrmRecordId(record.id)}
                               >
+                                <td>
+                                  <input
+                                    aria-label={`Select ${record.company_name}`}
+                                    checked={selectedCrmRecordIds.includes(record.id)}
+                                    onChange={() => toggleCrmRecordSelection(record.id)}
+                                    onClick={(event) => event.stopPropagation()}
+                                    type="checkbox"
+                                  />
+                                </td>
                                 <td>
                                   <strong>{record.company_name}</strong>
                                   <small>{record.value_estimate || 'Opportunity'}</small>

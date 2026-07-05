@@ -566,6 +566,68 @@ textarea {
   white-space: nowrap;
 }
 
+.crm-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.crm-filter-grid label {
+  display: grid;
+  gap: 6px;
+  color: #65737a;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.crm-filter-grid select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid rgba(19, 60, 79, 0.13);
+  border-radius: 8px;
+  color: #172126;
+  background: #ffffff;
+  font: inherit;
+  text-transform: none;
+}
+
+.crm-bulk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid rgba(19, 60, 79, 0.11);
+  border-radius: 8px;
+  background: #f7faf8;
+}
+
+.crm-bulk-bar span {
+  margin-right: auto;
+  color: #66747b;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.crm-bulk-bar button {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #133c4f;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.crm-bulk-bar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .crm-record-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
@@ -597,6 +659,18 @@ textarea {
   border-bottom: 1px solid rgba(19, 60, 79, 0.09);
   text-align: left;
   vertical-align: top;
+}
+
+.crm-table th:first-child,
+.crm-table td:first-child {
+  width: 44px;
+  padding-right: 0;
+}
+
+.crm-table input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #133c4f;
 }
 
 .crm-table th {
@@ -2015,6 +2089,7 @@ textarea {
   .workspace-band,
   .crm-metrics,
   .crm-workspace,
+  .crm-filter-grid,
   .crm-record-workbench,
   .metrics-row,
   .command-metrics,
@@ -2112,6 +2187,14 @@ textarea {
 
   .crm-detail-panel {
     position: static;
+  }
+
+  .crm-bulk-bar {
+    align-items: stretch;
+  }
+
+  .crm-bulk-bar span {
+    width: 100%;
   }
 }
 
