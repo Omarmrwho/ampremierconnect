@@ -146,6 +146,58 @@ type WorkspaceRecord = {
   }[]
 }
 
+type ProjectTask = {
+  id: string
+  project_id: string
+  task_name: string
+  status: string
+  owner: string | null
+  due_date: string | null
+  note: string | null
+  sort_order: number
+}
+
+type ProjectCrmRecord = {
+  id: string
+  project_id: string
+  company_name: string
+  contact_name: string | null
+  stage: string
+  owner: string | null
+  next_step: string | null
+  value_estimate: string | null
+}
+
+type ProjectCampaign = {
+  id: string
+  project_id: string
+  campaign_name: string
+  campaign_type: string
+  channel: string | null
+  status: string
+  recommendation: string | null
+}
+
+type ProjectIdea = {
+  id: string
+  project_id: string
+  title: string
+  score: string | null
+  next_move: string | null
+  status: string
+}
+
+type ProjectAgentRecommendation = {
+  id: string
+  project_id: string
+  agent_role: string
+  assignment: string
+  output_target: string | null
+  status: string
+}
+
+type CommandTable = 'project_tasks' | 'project_crm_records' | 'project_campaigns' | 'project_ideas' | 'project_agent_recommendations'
+
 const workspaceTabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'command', label: 'Command' },
   { id: 'construction', label: 'Schedule' },
@@ -614,6 +666,12 @@ function App() {
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('command')
   const [customDecision, setCustomDecision] = useState('')
+  const [commandDataStatus, setCommandDataStatus] = useState('')
+  const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([])
+  const [projectCrmRecords, setProjectCrmRecords] = useState<ProjectCrmRecord[]>([])
+  const [projectCampaigns, setProjectCampaigns] = useState<ProjectCampaign[]>([])
+  const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
+  const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
 
   const isInternal = profile?.role === 'internal'
@@ -641,6 +699,21 @@ function App() {
   const selectedWorkspace = selectedActionProject
     ? projectWorkspaces[selectedActionProject.project_name] || defaultWorkspace
     : null
+  const selectedProjectTasks = selectedActionProject
+    ? projectTasks.filter((task) => task.project_id === selectedActionProject.id)
+    : []
+  const selectedProjectCrmRecords = selectedActionProject
+    ? projectCrmRecords.filter((record) => record.project_id === selectedActionProject.id)
+    : []
+  const selectedProjectCampaigns = selectedActionProject
+    ? projectCampaigns.filter((campaign) => campaign.project_id === selectedActionProject.id)
+    : []
+  const selectedProjectIdeas = selectedActionProject
+    ? projectIdeas.filter((idea) => idea.project_id === selectedActionProject.id)
+    : []
+  const selectedProjectAgentRecommendations = selectedActionProject
+    ? projectAgentRecommendations.filter((agent) => agent.project_id === selectedActionProject.id)
+    : []
 
   const roleMessage = useMemo(() => {
     if (selectedRole === 'Vendor') {
@@ -715,6 +788,7 @@ function App() {
     if (isInternal) {
       loadAccessRequests()
       loadProjectStatuses()
+      loadCommandRecords()
     }
   }, [isInternal])
 
@@ -775,6 +849,175 @@ function App() {
 
     setProjectStatuses(data ?? [])
     setProjectStatusMessage('')
+  }
+
+  const loadCommandRecords = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      return
+    }
+
+    setCommandDataStatus('Loading project workspace records...')
+    const [tasksResult, crmResult, campaignsResult, ideasResult, agentsResult] = await Promise.all([
+      supabase
+        .from('project_tasks')
+        .select('id,project_id,task_name,status,owner,due_date,note,sort_order')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('project_crm_records')
+        .select('id,project_id,company_name,contact_name,stage,owner,next_step,value_estimate')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('project_campaigns')
+        .select('id,project_id,campaign_name,campaign_type,channel,status,recommendation')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('project_ideas')
+        .select('id,project_id,title,score,next_move,status')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('project_agent_recommendations')
+        .select('id,project_id,agent_role,assignment,output_target,status')
+        .order('created_at', { ascending: false }),
+    ])
+
+    if (tasksResult.error || crmResult.error || campaignsResult.error || ideasResult.error || agentsResult.error) {
+      setCommandDataStatus('Workspace records could not load. Apply the latest Supabase schema, including project_tasks.')
+      return
+    }
+
+    setProjectTasks(tasksResult.data ?? [])
+    setProjectCrmRecords(crmResult.data ?? [])
+    setProjectCampaigns(campaignsResult.data ?? [])
+    setProjectIdeas(ideasResult.data ?? [])
+    setProjectAgentRecommendations(agentsResult.data ?? [])
+    setCommandDataStatus('')
+  }
+
+  const createProject = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    setProjectStatusMessage('Creating project workspace...')
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectStatusMessage('Project staged. Supabase env vars are not connected yet.')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('project_session_status')
+      .insert({
+        project_name: String(formData.get('projectName')),
+        client_name: String(formData.get('clientName')) || 'AM Premier Solutions',
+        status: String(formData.get('status')) as ProjectOperatingStatus,
+        health: String(formData.get('health')) as ProjectSessionStatus['health'],
+        source_session_label: String(formData.get('projectType')) || 'manual command room',
+        owner: String(formData.get('owner')) || 'Elara',
+        last_update: String(formData.get('lastUpdate')) || 'Project workspace created.',
+        next_action: String(formData.get('nextAction')) || 'Define next action, owner, and deadline.',
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      setProjectStatusMessage('Project could not be created. Confirm internal insert policy is active.')
+      return
+    }
+
+    event.currentTarget.reset()
+    setProjectStatusMessage('Project workspace created.')
+    await loadProjectStatuses()
+    setSelectedActionProjectId(data.id)
+  }
+
+  const createCommandRecord = async (event: FormEvent<HTMLFormElement>, table: CommandTable) => {
+    event.preventDefault()
+    if (!selectedActionProject || !supabase) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    setCommandDataStatus('Saving workspace record...')
+
+    const baseRecord = {
+      project_id: selectedActionProject.id,
+      updated_at: new Date().toISOString(),
+    }
+
+    const payloadByTable: Record<CommandTable, Record<string, string | number | null>> = {
+      project_tasks: {
+        ...baseRecord,
+        task_name: String(formData.get('taskName')),
+        status: String(formData.get('taskStatus')) || 'planned',
+        owner: String(formData.get('taskOwner')) || null,
+        due_date: String(formData.get('taskDueDate')) || null,
+        note: String(formData.get('taskNote')) || null,
+        sort_order: selectedProjectTasks.length + 1,
+      },
+      project_crm_records: {
+        ...baseRecord,
+        company_name: String(formData.get('companyName')),
+        contact_name: String(formData.get('contactName')) || null,
+        stage: String(formData.get('crmStage')) || 'qualification',
+        owner: String(formData.get('crmOwner')) || null,
+        next_step: String(formData.get('crmNextStep')) || null,
+        value_estimate: String(formData.get('crmValue')) || null,
+      },
+      project_campaigns: {
+        ...baseRecord,
+        campaign_name: String(formData.get('campaignName')),
+        campaign_type: String(formData.get('campaignType')) || 'sales',
+        channel: String(formData.get('campaignChannel')) || null,
+        status: String(formData.get('campaignStatus')) || 'draft',
+        recommendation: String(formData.get('campaignRecommendation')) || null,
+      },
+      project_ideas: {
+        ...baseRecord,
+        title: String(formData.get('ideaTitle')),
+        score: String(formData.get('ideaScore')) || null,
+        next_move: String(formData.get('ideaNextMove')) || null,
+        status: String(formData.get('ideaStatus')) || 'new',
+      },
+      project_agent_recommendations: {
+        ...baseRecord,
+        agent_role: String(formData.get('agentRole')),
+        assignment: String(formData.get('agentAssignment')),
+        output_target: String(formData.get('agentOutput')) || null,
+        status: String(formData.get('agentStatus')) || 'recommended',
+      },
+    }
+
+    const { error } = await supabase.from(table).insert(payloadByTable[table])
+
+    if (error) {
+      setCommandDataStatus('Record could not be saved. Confirm internal workspace policies are active.')
+      return
+    }
+
+    event.currentTarget.reset()
+    setCommandDataStatus('Workspace record saved.')
+    await loadCommandRecords()
+  }
+
+  const updateCommandRecordStatus = async (table: CommandTable, id: string, status: string) => {
+    if (!supabase) {
+      return
+    }
+
+    setCommandDataStatus('Updating record status...')
+    const fieldName = table === 'project_crm_records' ? 'stage' : 'status'
+    const { error } = await supabase
+      .from(table)
+      .update({ [fieldName]: status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    if (error) {
+      setCommandDataStatus('Status update failed.')
+      return
+    }
+
+    setCommandDataStatus('Status updated.')
+    await loadCommandRecords()
   }
 
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
@@ -1091,6 +1334,62 @@ function App() {
               </div>
             </div>
 
+            <section className="ops-create-panel" aria-label="Create project workspace">
+              <div className="panel-heading">
+                <BriefcaseBusiness size={20} />
+                <div>
+                  <h2>Create Project Workspace</h2>
+                  <p>Add a real tracked project with owner, status, last update, and next action.</p>
+                </div>
+              </div>
+              <form className="ops-form-grid" onSubmit={createProject}>
+                <label>
+                  Project name
+                  <input name="projectName" placeholder="AM Premier Station" required type="text" />
+                </label>
+                <label>
+                  Client / business
+                  <input name="clientName" placeholder="AM Premier Solutions" type="text" />
+                </label>
+                <label>
+                  Type / source
+                  <input name="projectType" placeholder="Construction / CRM / campaign" type="text" />
+                </label>
+                <label>
+                  Owner
+                  <input name="owner" placeholder="Elara / Omar / Agent" type="text" />
+                </label>
+                <label>
+                  Status
+                  <select defaultValue="active" name="status">
+                    <option value="active">Active</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="complete">Complete</option>
+                  </select>
+                </label>
+                <label>
+                  Health
+                  <select defaultValue="green" name="health">
+                    <option value="green">Green</option>
+                    <option value="yellow">Yellow</option>
+                    <option value="red">Red</option>
+                  </select>
+                </label>
+                <label className="wide">
+                  Last update
+                  <textarea name="lastUpdate" placeholder="What changed or what exists right now?" />
+                </label>
+                <label className="wide">
+                  Next action
+                  <textarea name="nextAction" placeholder="The next specific action, owner, and timing." />
+                </label>
+                <button type="submit">
+                  Create Workspace <BadgeCheck size={18} />
+                </button>
+              </form>
+            </section>
+
             <div className="command-board">
               <section className="movement-panel" aria-label="Project movement board">
                 <div className="panel-heading">
@@ -1292,17 +1591,72 @@ function App() {
                           </button>
                         </div>
                         <div className="schedule-list">
-                          {selectedWorkspace.construction.schedule.map((item) => (
-                            <article className="schedule-row" key={item.name}>
+                          {(selectedProjectTasks.length > 0
+                            ? selectedProjectTasks.map((task) => ({
+                                id: task.id,
+                                name: task.task_name,
+                                status: task.status,
+                                owner: task.owner || 'Unassigned',
+                                note: `${task.note || 'No note captured.'}${task.due_date ? ` Due ${task.due_date}.` : ''}`,
+                                persisted: true,
+                              }))
+                            : selectedWorkspace.construction.schedule.map((item) => ({ ...item, id: item.name, persisted: false }))
+                          ).map((item) => (
+                            <article className="schedule-row" key={item.id}>
                               <span className={`schedule-status ${item.status}`}>{item.status}</span>
                               <div>
                                 <strong>{item.name}</strong>
                                 <p>{item.note}</p>
                                 <small>{item.owner}</small>
+                                {item.persisted && (
+                                  <div className="record-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCommandRecordStatus('project_tasks', item.id, 'active')}
+                                    >
+                                      Active
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCommandRecordStatus('project_tasks', item.id, 'complete')}
+                                    >
+                                      Done
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </article>
                           ))}
                         </div>
+                        <form className="ops-form-grid compact" onSubmit={(event) => createCommandRecord(event, 'project_tasks')}>
+                          <label>
+                            Task / milestone
+                            <input name="taskName" placeholder="Submit permit package" required type="text" />
+                          </label>
+                          <label>
+                            Owner
+                            <input name="taskOwner" placeholder="Construction Manager Agent" type="text" />
+                          </label>
+                          <label>
+                            Status
+                            <select defaultValue="planned" name="taskStatus">
+                              <option value="planned">Planned</option>
+                              <option value="active">Active</option>
+                              <option value="waiting">Waiting</option>
+                              <option value="blocked">Blocked</option>
+                              <option value="complete">Complete</option>
+                            </select>
+                          </label>
+                          <label>
+                            Due date
+                            <input name="taskDueDate" type="date" />
+                          </label>
+                          <label className="wide">
+                            Note
+                            <textarea name="taskNote" placeholder="Dependency, blocker, deliverable, or next step." />
+                          </label>
+                          <button type="submit">Add Task</button>
+                        </form>
                       </div>
                     )}
 
@@ -1328,15 +1682,77 @@ function App() {
                           </button>
                         </div>
                         <div className="crm-grid">
-                          {selectedWorkspace.crm.companies.map((company) => (
-                            <article className="crm-card" key={company.name}>
+                          {(selectedProjectCrmRecords.length > 0
+                            ? selectedProjectCrmRecords.map((record) => ({
+                                id: record.id,
+                                name: record.company_name,
+                                stage: record.stage,
+                                nextStep: `${record.next_step || 'No next step captured.'}${
+                                  record.contact_name ? ` Contact: ${record.contact_name}.` : ''
+                                }${record.value_estimate ? ` Value: ${record.value_estimate}.` : ''}`,
+                                owner: record.owner || 'Unassigned',
+                                persisted: true,
+                              }))
+                            : selectedWorkspace.crm.companies.map((company) => ({
+                                ...company,
+                                id: company.name,
+                                persisted: false,
+                              }))
+                          ).map((company) => (
+                            <article className="crm-card" key={company.id}>
                               <span>{company.stage}</span>
                               <h3>{company.name}</h3>
                               <p>{company.nextStep}</p>
                               <small>{company.owner}</small>
+                              {company.persisted && (
+                                <div className="record-actions">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateCommandRecordStatus('project_crm_records', company.id, 'follow-up')}
+                                  >
+                                    Follow-up
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateCommandRecordStatus('project_crm_records', company.id, 'won')}
+                                  >
+                                    Won
+                                  </button>
+                                </div>
+                              )}
                             </article>
                           ))}
                         </div>
+                        <form
+                          className="ops-form-grid compact"
+                          onSubmit={(event) => createCommandRecord(event, 'project_crm_records')}
+                        >
+                          <label>
+                            Company
+                            <input name="companyName" placeholder="Site owner / utility / vendor" required type="text" />
+                          </label>
+                          <label>
+                            Contact
+                            <input name="contactName" placeholder="Decision maker" type="text" />
+                          </label>
+                          <label>
+                            Stage
+                            <input name="crmStage" placeholder="Qualification / proposal / follow-up" type="text" />
+                          </label>
+                          <label>
+                            Owner
+                            <input name="crmOwner" placeholder="CRM Agent" type="text" />
+                          </label>
+                          <label>
+                            Value
+                            <input name="crmValue" placeholder="$ amount or TBD" type="text" />
+                          </label>
+                          <label className="wide">
+                            Next step
+                            <textarea name="crmNextStep" placeholder="Call, quote, meeting, doc request, or owner decision." />
+                          </label>
+                          <button type="submit">Add CRM Record</button>
+                        </form>
                       </div>
                     )}
 
@@ -1362,8 +1778,22 @@ function App() {
                           </button>
                         </div>
                         <div className="campaign-grid">
-                          {selectedWorkspace.campaigns.map((campaign) => (
-                            <article className="campaign-card" key={campaign.name}>
+                          {(selectedProjectCampaigns.length > 0
+                            ? selectedProjectCampaigns.map((campaign) => ({
+                                id: campaign.id,
+                                name: campaign.campaign_name,
+                                channel: `${campaign.campaign_type}${campaign.channel ? ` / ${campaign.channel}` : ''}`,
+                                status: campaign.status,
+                                recommendation: campaign.recommendation || 'No recommendation captured.',
+                                persisted: true,
+                              }))
+                            : selectedWorkspace.campaigns.map((campaign) => ({
+                                ...campaign,
+                                id: campaign.name,
+                                persisted: false,
+                              }))
+                          ).map((campaign) => (
+                            <article className="campaign-card" key={campaign.id}>
                               <div>
                                 <Megaphone size={18} />
                                 <span>{campaign.status}</span>
@@ -1371,9 +1801,61 @@ function App() {
                               <h3>{campaign.name}</h3>
                               <small>{campaign.channel}</small>
                               <p>{campaign.recommendation}</p>
+                              {campaign.persisted && (
+                                <div className="record-actions">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateCommandRecordStatus('project_campaigns', campaign.id, 'active')}
+                                  >
+                                    Active
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateCommandRecordStatus('project_campaigns', campaign.id, 'complete')}
+                                  >
+                                    Done
+                                  </button>
+                                </div>
+                              )}
                             </article>
                           ))}
                         </div>
+                        <form
+                          className="ops-form-grid compact"
+                          onSubmit={(event) => createCommandRecord(event, 'project_campaigns')}
+                        >
+                          <label>
+                            Campaign
+                            <input name="campaignName" placeholder="Site-host sales campaign" required type="text" />
+                          </label>
+                          <label>
+                            Type
+                            <select defaultValue="sales" name="campaignType">
+                              <option value="sales">Sales</option>
+                              <option value="marketing">Marketing</option>
+                              <option value="launch">Launch</option>
+                              <option value="partner">Partner</option>
+                            </select>
+                          </label>
+                          <label>
+                            Channel
+                            <input name="campaignChannel" placeholder="Email, calls, LinkedIn, ads" type="text" />
+                          </label>
+                          <label>
+                            Status
+                            <select defaultValue="draft" name="campaignStatus">
+                              <option value="draft">Draft</option>
+                              <option value="recommended">Recommended</option>
+                              <option value="active">Active</option>
+                              <option value="complete">Complete</option>
+                            </select>
+                          </label>
+                          <label className="wide">
+                            Recommendation
+                            <textarea name="campaignRecommendation" placeholder="Audience, offer, message, and next execution step." />
+                          </label>
+                          <button type="submit">Add Campaign</button>
+                        </form>
                       </div>
                     )}
 
@@ -1399,17 +1881,71 @@ function App() {
                           </button>
                         </div>
                         <div className="idea-list">
-                          {selectedWorkspace.ideas.map((idea) => (
-                            <article className="idea-row" key={idea.title}>
+                          {(selectedProjectIdeas.length > 0
+                            ? selectedProjectIdeas.map((idea) => ({
+                                id: idea.id,
+                                title: idea.title,
+                                score: idea.score || idea.status,
+                                nextMove: idea.next_move || 'No next move captured.',
+                                persisted: true,
+                              }))
+                            : selectedWorkspace.ideas.map((idea) => ({ ...idea, id: idea.title, persisted: false }))
+                          ).map((idea) => (
+                            <article className="idea-row" key={idea.id}>
                               <Lightbulb size={18} />
                               <div>
                                 <strong>{idea.title}</strong>
                                 <p>{idea.nextMove}</p>
+                                {idea.persisted && (
+                                  <div className="record-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCommandRecordStatus('project_ideas', idea.id, 'promoted')}
+                                    >
+                                      Promote
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCommandRecordStatus('project_ideas', idea.id, 'rejected')}
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                               <span>{idea.score}</span>
                             </article>
                           ))}
                         </div>
+                        <form className="ops-form-grid compact" onSubmit={(event) => createCommandRecord(event, 'project_ideas')}>
+                          <label>
+                            Idea
+                            <input name="ideaTitle" placeholder="EV site-host ROI calculator" required type="text" />
+                          </label>
+                          <label>
+                            Score
+                            <select defaultValue="High" name="ideaScore">
+                              <option value="Very high">Very high</option>
+                              <option value="High">High</option>
+                              <option value="Medium">Medium</option>
+                              <option value="Low">Low</option>
+                            </select>
+                          </label>
+                          <label>
+                            Status
+                            <select defaultValue="new" name="ideaStatus">
+                              <option value="new">New</option>
+                              <option value="promoted">Promoted</option>
+                              <option value="rejected">Rejected</option>
+                              <option value="parked">Parked</option>
+                            </select>
+                          </label>
+                          <label className="wide">
+                            Next move
+                            <textarea name="ideaNextMove" placeholder="What should happen if this idea is worth moving?" />
+                          </label>
+                          <button type="submit">Add Idea</button>
+                        </form>
                       </div>
                     )}
 
@@ -1435,15 +1971,70 @@ function App() {
                           </button>
                         </div>
                         <div className="agent-grid">
-                          {selectedWorkspace.agents.map((agent) => (
-                            <article className="agent-card" key={agent.role}>
+                          {(selectedProjectAgentRecommendations.length > 0
+                            ? selectedProjectAgentRecommendations.map((agent) => ({
+                                id: agent.id,
+                                role: agent.agent_role,
+                                assignment: agent.assignment,
+                                output: `${agent.output_target || 'No output target captured.'} Status: ${agent.status}.`,
+                                persisted: true,
+                              }))
+                            : selectedWorkspace.agents.map((agent) => ({ ...agent, id: agent.role, persisted: false }))
+                          ).map((agent) => (
+                            <article className="agent-card" key={agent.id}>
                               <UserRound size={18} />
                               <h3>{agent.role}</h3>
                               <p>{agent.assignment}</p>
                               <small>{agent.output}</small>
+                              {agent.persisted && (
+                                <div className="record-actions">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateCommandRecordStatus('project_agent_recommendations', agent.id, 'active')
+                                    }
+                                  >
+                                    Active
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateCommandRecordStatus('project_agent_recommendations', agent.id, 'complete')
+                                    }
+                                  >
+                                    Done
+                                  </button>
+                                </div>
+                              )}
                             </article>
                           ))}
                         </div>
+                        <form
+                          className="ops-form-grid compact"
+                          onSubmit={(event) => createCommandRecord(event, 'project_agent_recommendations')}
+                        >
+                          <label>
+                            Agent role
+                            <input name="agentRole" placeholder="Construction Manager Agent" required type="text" />
+                          </label>
+                          <label>
+                            Status
+                            <select defaultValue="recommended" name="agentStatus">
+                              <option value="recommended">Recommended</option>
+                              <option value="active">Active</option>
+                              <option value="complete">Complete</option>
+                            </select>
+                          </label>
+                          <label className="wide">
+                            Assignment
+                            <textarea name="agentAssignment" placeholder="What this agent owns for the project." required />
+                          </label>
+                          <label className="wide">
+                            Output target
+                            <textarea name="agentOutput" placeholder="Schedule, campaign, call list, risk memo, or decision brief." />
+                          </label>
+                          <button type="submit">Assign Agent</button>
+                        </form>
                       </div>
                     )}
                   </div>
@@ -1551,6 +2142,12 @@ function App() {
               <div className="success-note" role="status">
                 <ShieldCheck size={18} />
                 <span>{projectStatusMessage}</span>
+              </div>
+            )}
+            {commandDataStatus && (
+              <div className="success-note" role="status">
+                <ClipboardCheck size={18} />
+                <span>{commandDataStatus}</span>
               </div>
             )}
 

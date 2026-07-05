@@ -76,6 +76,19 @@ create table if not exists public.project_crm_records (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.project_tasks (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.project_session_status(id) on delete cascade,
+  task_name text not null,
+  status text not null default 'planned',
+  owner text,
+  due_date date,
+  note text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.project_campaigns (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references public.project_session_status(id) on delete cascade,
@@ -115,6 +128,7 @@ alter table public.access_requests enable row level security;
 alter table public.intake_requests enable row level security;
 alter table public.project_session_status enable row level security;
 alter table public.project_crm_records enable row level security;
+alter table public.project_tasks enable row level security;
 alter table public.project_campaigns enable row level security;
 alter table public.project_ideas enable row level security;
 alter table public.project_agent_recommendations enable row level security;
@@ -274,6 +288,14 @@ with check (public.is_internal_admin());
 drop policy if exists "Internal admins can manage project crm records" on public.project_crm_records;
 create policy "Internal admins can manage project crm records"
 on public.project_crm_records
+for all
+to authenticated
+using (public.is_internal_admin())
+with check (public.is_internal_admin());
+
+drop policy if exists "Internal admins can manage project tasks" on public.project_tasks;
+create policy "Internal admins can manage project tasks"
+on public.project_tasks
 for all
 to authenticated
 using (public.is_internal_admin())
