@@ -768,6 +768,14 @@ textarea {
   background: #ffffff;
 }
 
+.proposal-table-wrap {
+  overflow: auto;
+  margin-bottom: 14px;
+  border: 1px solid rgba(19, 60, 79, 0.11);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
 .campaign-table {
   width: 100%;
   min-width: 860px;

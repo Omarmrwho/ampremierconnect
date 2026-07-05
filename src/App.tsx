@@ -118,7 +118,7 @@ type ProjectFilter = (typeof projectFilters)[number]
 type CrmGapFilter = (typeof crmGapFilters)[number]
 type CampaignActivityFilter = (typeof campaignActivityFilters)[number]
 type ProjectOperatingStatus = ProjectSessionStatus['status']
-type WorkspaceTab = 'command' | 'construction' | 'crm' | 'campaigns' | 'ideas' | 'agents'
+type WorkspaceTab = 'command' | 'construction' | 'crm' | 'campaigns' | 'proposals' | 'ideas' | 'agents'
 
 type WorkspaceRecord = {
   type: string
@@ -214,6 +214,24 @@ type ProjectCampaignActivity = {
   next_step: string | null
 }
 
+type ProjectProposal = {
+  id: string
+  project_id: string
+  proposal_date: string
+  proposal_time: string | null
+  company_name: string
+  company_address: string | null
+  directed_to: string
+  contact_title: string | null
+  contact_email: string | null
+  price: string | null
+  scope_summary: string | null
+  terms: string | null
+  valid_until: string | null
+  status: string
+  next_step: string | null
+}
+
 type ProjectIdea = {
   id: string
   project_id: string
@@ -252,6 +270,7 @@ const workspaceTabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'construction', label: 'Schedule' },
   { id: 'crm', label: 'CRM' },
   { id: 'campaigns', label: 'Campaigns' },
+  { id: 'proposals', label: 'Proposals' },
   { id: 'ideas', label: 'Ideas' },
   { id: 'agents', label: 'Agents' },
 ]
@@ -775,6 +794,7 @@ function App() {
   const [campaignStatusFilter, setCampaignStatusFilter] = useState('all')
   const [campaignActivityFilter, setCampaignActivityFilter] = useState<CampaignActivityFilter>('all')
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
+  const [projectProposals, setProjectProposals] = useState<ProjectProposal[]>([])
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
   const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
@@ -918,6 +938,9 @@ function App() {
     ? projectCampaignActivities
         .filter((activity) => activity.campaign_id === selectedCampaign.id)
         .sort((left, right) => right.activity_date.localeCompare(left.activity_date))
+    : []
+  const selectedProjectProposals = selectedActionProject
+    ? projectProposals.filter((proposal) => proposal.project_id === selectedActionProject.id)
     : []
   const selectedProjectIdeas = selectedActionProject
     ? projectIdeas.filter((idea) => idea.project_id === selectedActionProject.id)
@@ -1099,7 +1122,7 @@ function App() {
     const crmSelect =
       'id,project_id,company_name,contact_name,contact_title,email,phone,location,segment,website,source_url,campaign_name,channel,last_contacted_at,last_contact_subject,fit_reason,stage,owner,next_step,value_estimate'
     const crmFallbackSelect = 'id,project_id,company_name,contact_name,stage,owner,next_step,value_estimate'
-    const [tasksResult, crmResult, campaignsResult, campaignActivitiesResult, ideasResult, agentsResult] = await Promise.all([
+    const [tasksResult, crmResult, campaignsResult, campaignActivitiesResult, proposalsResult, ideasResult, agentsResult] = await Promise.all([
       supabase
         .from('project_tasks')
         .select('id,project_id,task_name,status,owner,due_date,note,sort_order')
@@ -1117,6 +1140,10 @@ function App() {
         .from('project_campaign_activities')
         .select('id,project_id,campaign_id,activity_type,activity_date,owner,outcome,next_step')
         .order('activity_date', { ascending: false }),
+      supabase
+        .from('project_proposals')
+        .select('id,project_id,proposal_date,proposal_time,company_name,company_address,directed_to,contact_title,contact_email,price,scope_summary,terms,valid_until,status,next_step')
+        .order('proposal_date', { ascending: false }),
       supabase
         .from('project_ideas')
         .select('id,project_id,title,score,next_move,status')
@@ -1142,6 +1169,7 @@ function App() {
       : campaignsResult
 
     const campaignActivitiesData = campaignActivitiesResult.error ? { data: [] } : campaignActivitiesResult
+    const proposalsData = proposalsResult.error ? { data: [] } : proposalsResult
 
     if (tasksResult.error || crmData.error || campaignsData.error || ideasResult.error || agentsResult.error) {
       setCommandDataStatus('Workspace records could not load. Apply the latest Supabase schema, including project_tasks.')
@@ -1152,6 +1180,7 @@ function App() {
     setProjectCrmRecords(crmData.data ?? [])
     setProjectCampaigns(campaignsData.data ?? [])
     setProjectCampaignActivities(campaignActivitiesData.data ?? [])
+    setProjectProposals(proposalsData.data ?? [])
     setProjectIdeas(ideasResult.data ?? [])
     setProjectAgentRecommendations(agentsResult.data ?? [])
     setCommandDataStatus('')
@@ -1492,6 +1521,42 @@ function App() {
     }
 
     setCommandDataStatus('Campaign execution details updated.')
+    await loadCommandRecords()
+  }
+
+  const createProposal = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedActionProject || !supabase) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    setCommandDataStatus('Saving proposal draft...')
+    const { error } = await supabase.from('project_proposals').insert({
+      project_id: selectedActionProject.id,
+      proposal_date: String(formData.get('proposalDate')) || new Date().toISOString().slice(0, 10),
+      proposal_time: String(formData.get('proposalTime')) || null,
+      company_name: String(formData.get('proposalCompany')),
+      company_address: String(formData.get('proposalAddress')) || null,
+      directed_to: String(formData.get('proposalDirectedTo')),
+      contact_title: String(formData.get('proposalContactTitle')) || null,
+      contact_email: String(formData.get('proposalContactEmail')) || null,
+      price: String(formData.get('proposalPrice')) || null,
+      scope_summary: String(formData.get('proposalScope')) || null,
+      terms: String(formData.get('proposalTerms')) || null,
+      valid_until: String(formData.get('proposalValidUntil')) || null,
+      status: String(formData.get('proposalStatus')) || 'draft',
+      next_step: String(formData.get('proposalNextStep')) || null,
+      updated_at: new Date().toISOString(),
+    })
+
+    if (error) {
+      setCommandDataStatus('Proposal could not be saved. Apply the latest proposal builder schema.')
+      return
+    }
+
+    event.currentTarget.reset()
+    setCommandDataStatus('Proposal draft saved.')
     await loadCommandRecords()
   }
 
@@ -3096,6 +3161,126 @@ function App() {
                             <textarea name="campaignProofNotes" placeholder="Proof needed, live result notes, conversion signals, or attribution notes." />
                           </label>
                           <button type="submit">Add Campaign</button>
+                        </form>
+                      </div>
+                    )}
+
+                    {workspaceTab === 'proposals' && (
+                      <div className="workspace-tab-panel">
+                        <div className="workspace-section-head">
+                          <div>
+                            <span className="decision-label">Proposal Builder</span>
+                            <h3>Proposal drafts</h3>
+                            <p>Create clean proposal records when a CRM lead reaches proposal stage.</p>
+                          </div>
+                        </div>
+                        {selectedProjectProposals.length > 0 ? (
+                          <div className="proposal-table-wrap">
+                            <table className="campaign-table proposal-table">
+                              <thead>
+                                <tr>
+                                  <th>Company</th>
+                                  <th>Directed To</th>
+                                  <th>Date</th>
+                                  <th>Price</th>
+                                  <th>Status</th>
+                                  <th>Next Step</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedProjectProposals.map((proposal) => (
+                                  <tr key={proposal.id}>
+                                    <td>
+                                      <strong>{proposal.company_name}</strong>
+                                      <small>{proposal.company_address || 'No address captured'}</small>
+                                    </td>
+                                    <td>
+                                      {proposal.directed_to}
+                                      <small>{proposal.contact_title || proposal.contact_email || 'Contact details pending'}</small>
+                                    </td>
+                                    <td>
+                                      {proposal.proposal_date}
+                                      <small>{proposal.proposal_time || 'Time not set'}</small>
+                                    </td>
+                                    <td>{proposal.price || 'TBD'}</td>
+                                    <td>
+                                      <span className="crm-stage-pill">{proposal.status}</span>
+                                    </td>
+                                    <td>{proposal.next_step || proposal.scope_summary || 'Prepare and send proposal'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <article className="empty-project-state">
+                            <FileText size={22} />
+                            <div>
+                              <h3>No proposals yet.</h3>
+                              <p>Create one when a CRM record or sales conversation reaches proposal stage.</p>
+                            </div>
+                          </article>
+                        )}
+                        <form className="ops-form-grid compact" onSubmit={createProposal}>
+                          <label>
+                            Date
+                            <input defaultValue={new Date().toISOString().slice(0, 10)} name="proposalDate" type="date" />
+                          </label>
+                          <label>
+                            Time
+                            <input name="proposalTime" type="time" />
+                          </label>
+                          <label>
+                            Company
+                            <input name="proposalCompany" placeholder="Company name" required type="text" />
+                          </label>
+                          <label>
+                            Directed to
+                            <input name="proposalDirectedTo" placeholder="Decision maker / recipient" required type="text" />
+                          </label>
+                          <label>
+                            Contact title
+                            <input name="proposalContactTitle" placeholder="Owner, VP, Facilities Director" type="text" />
+                          </label>
+                          <label>
+                            Contact email
+                            <input name="proposalContactEmail" placeholder="recipient@company.com" type="email" />
+                          </label>
+                          <label>
+                            Price
+                            <input name="proposalPrice" placeholder="$25,000 / TBD / Range" type="text" />
+                          </label>
+                          <label>
+                            Valid until
+                            <input name="proposalValidUntil" type="date" />
+                          </label>
+                          <label>
+                            Status
+                            <select defaultValue="draft" name="proposalStatus">
+                              <option value="draft">Draft</option>
+                              <option value="ready">Ready</option>
+                              <option value="sent">Sent</option>
+                              <option value="accepted">Accepted</option>
+                              <option value="declined">Declined</option>
+                            </select>
+                          </label>
+                          <label className="wide">
+                            Company address
+                            <textarea name="proposalAddress" placeholder="Street, city, state, ZIP." />
+                          </label>
+                          <label className="wide">
+                            Scope summary
+                            <textarea name="proposalScope" placeholder="What is included, deliverables, service area, equipment, or work package." />
+                          </label>
+                          <label className="wide">
+                            Terms
+                            <textarea name="proposalTerms" placeholder="Deposit, payment timing, assumptions, exclusions, expiration, or next required approval." />
+                          </label>
+                          <label className="wide">
+                            Next step
+                            <textarea name="proposalNextStep" placeholder="Send proposal, schedule review call, collect missing site info, or revise price." />
+                          </label>
+                          <button type="submit">Save Proposal Draft</button>
                         </form>
                       </div>
                     )}
