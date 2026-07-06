@@ -1971,13 +1971,16 @@ function App() {
       return
     }
 
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer')
+    const printWindow = window.open('', '_blank')
     if (!printWindow) {
       setCommandDataStatus('Popup blocked. Allow popups for this site, then download the proposal again.')
       return
     }
 
-    printWindow.document.write(`
+    printWindow.opener = null
+    try {
+      printWindow.document.open()
+      printWindow.document.write(`
       <!doctype html>
       <html>
         <head>
@@ -2122,11 +2125,17 @@ function App() {
         <body>${proposalDocument.outerHTML}</body>
       </html>
     `)
-    printWindow.document.close()
-    printWindow.focus()
-    setTimeout(() => {
-      printWindow.print()
-    }, 250)
+      printWindow.document.close()
+      printWindow.focus()
+      setTimeout(() => {
+        printWindow.print()
+      }, 250)
+    } catch (error) {
+      printWindow.close()
+      setCommandDataStatus(
+        `PDF window failed to render: ${error instanceof Error ? error.message : 'browser blocked the print document.'}`,
+      )
+    }
   }
 
   const copySelectedProposalLink = async () => {
