@@ -2695,6 +2695,24 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.proposals-page .command-metrics,
+.proposals-page .ops-create-panel,
+.proposals-page .command-board,
+.proposals-page .decision-layout,
+.proposals-page .decision-drawer > .panel-heading,
+.proposals-page .workspace-hero,
+.proposals-page .workspace-tabs {
+  display: none;
+}
+
+.proposals-page .decision-drawer {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .project-card p {
   margin-bottom: 0;
   color: #65737a;

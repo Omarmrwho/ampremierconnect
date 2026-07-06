@@ -3101,17 +3101,19 @@ function App() {
         </nav>
 
         {isInternal ? (
-          <section className="command-section command-page">
+          <section className={`command-section command-page ${isProposalsRoute ? 'proposals-page' : ''}`}>
             <div className="section-heading command-heading">
               <div>
-                <p className="eyebrow">Internal command portal</p>
-                <h1>Live project status pulled from operating sessions.</h1>
+                <p className="eyebrow">{isProposalsRoute ? 'Proposal database' : 'Internal command portal'}</p>
+                <h1>{isProposalsRoute ? 'Proposal pipeline, access, and client-ready files.' : 'Live project status pulled from operating sessions.'}</h1>
                 <p className="hero-text">
-                  Internal workspace for project health, next actions, blockers, and active session status.
+                  {isProposalsRoute
+                    ? 'A dedicated proposal workspace for drafts, links, PDF previews, and pipeline movement.'
+                    : 'Internal workspace for project health, next actions, blockers, and active session status.'}
                 </p>
               </div>
-              <button type="button" className="refresh-button" onClick={loadProjectStatuses}>
-                Refresh <Radio size={17} />
+              <button type="button" className="refresh-button" onClick={isProposalsRoute ? loadCommandRecords : loadProjectStatuses}>
+                {isProposalsRoute ? 'Refresh Proposals' : 'Refresh'} <Radio size={17} />
               </button>
             </div>
 
@@ -3303,7 +3305,7 @@ function App() {
                     </div>
                   </dl>
                 </div>
-                {selectedWorkspace && (
+                {selectedWorkspace && isProposalsRoute && (
                   <div className="workspace-command-center">
                     <div className="workspace-hero">
                       <div>
