@@ -13,9 +13,11 @@ import {
   Filter,
   FileText,
   Gauge,
+  Image,
   Lightbulb,
   LockKeyhole,
   LogOut,
+  Link,
   MailCheck,
   Megaphone,
   MessageCircle,
@@ -31,6 +33,7 @@ import type { Session } from '@supabase/supabase-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import heroImage from './assets/hero.png'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const roles = ['Client', 'Vendor', 'Internal'] as const
@@ -948,6 +951,9 @@ function App() {
     : []
   const selectedProposal =
     selectedProjectProposals.find((proposal) => proposal.id === selectedProposalId) || selectedProjectProposals[0] || null
+  const selectedProposalShareUrl = selectedProposal
+    ? `${window.location.origin}/proposals?proposal=${selectedProposal.id}`
+    : ''
   const selectedProjectIdeas = selectedActionProject
     ? projectIdeas.filter((idea) => idea.project_id === selectedActionProject.id)
     : []
@@ -1078,6 +1084,17 @@ function App() {
     setCrmCampaignFilter('all')
     setCrmGapFilter('all')
   }, [selectedActionProjectId])
+
+  useEffect(() => {
+    if (!isProposalsRoute || selectedProposalId || selectedProjectProposals.length === 0) {
+      return
+    }
+
+    const proposalId = new URLSearchParams(window.location.search).get('proposal')
+    if (proposalId && selectedProjectProposals.some((proposal) => proposal.id === proposalId)) {
+      setSelectedProposalId(proposalId)
+    }
+  }, [isProposalsRoute, selectedProposalId, selectedProjectProposals])
 
   const navigateTo = (path: string) => {
     window.history.pushState({}, '', path)
@@ -1582,6 +1599,20 @@ function App() {
     }
 
     window.print()
+  }
+
+  const copySelectedProposalLink = async () => {
+    if (!selectedProposal || !selectedProposalShareUrl) {
+      setCommandDataStatus('Create or select a proposal before copying a proposal link.')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(selectedProposalShareUrl)
+      setCommandDataStatus('Proposal review link copied. Use Download PDF for the client-ready file.')
+    } catch {
+      setCommandDataStatus(selectedProposalShareUrl)
+    }
   }
 
   const handleAccessRequest = async (event: FormEvent<HTMLFormElement>) => {
@@ -3281,26 +3312,46 @@ function App() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => setCommandDataStatus('Email sending is the next backend step. PDF preview is ready now.')}
+                                  onClick={copySelectedProposalLink}
                                 >
-                                  Email Later <Send size={16} />
+                                  Copy Link <Link size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setCommandDataStatus(
+                                      'Email delivery still needs the storage/API backend. Download PDF and copy link are ready now.',
+                                    )
+                                  }
+                                >
+                                  Send Later <Send size={16} />
                                 </button>
                               </div>
                             </div>
                             <article className="proposal-document" aria-label="Proposal PDF preview">
                               <header className="proposal-document-head">
                                 <div className="proposal-doc-brand">
-                                  <span className="brand-mark">AP</span>
+                                  <span className="proposal-logo-mark">AM</span>
                                   <div>
-                                    <strong>AM Premier</strong>
-                                    <small>Proposal</small>
+                                    <strong>AM Premier Solutions</strong>
+                                    <small>Power, infrastructure, and execution support</small>
                                   </div>
                                 </div>
                                 <div>
-                                  <span>Status</span>
+                                  <span>Proposal Status</span>
                                   <strong>{selectedProposal.status}</strong>
                                 </div>
                               </header>
+                              <div className="proposal-cover-media">
+                                <img src={heroImage} alt="" />
+                                <div>
+                                  <span>
+                                    <Image size={15} /> AM Premier media package
+                                  </span>
+                                  <strong>Branded proposal output</strong>
+                                  <small>Prepared as a controlled client-facing package with AM Premier identity, scope, terms, and next action.</small>
+                                </div>
+                              </div>
                               <div className="proposal-doc-title">
                                 <span>Prepared for</span>
                                 <h2>{selectedProposal.company_name}</h2>
@@ -3336,7 +3387,13 @@ function App() {
                                   <span>Next step</span>
                                   <strong>{selectedProposal.next_step || 'Review and approve proposal.'}</strong>
                                 </div>
-                                <small>AM Premier Connect | Built for controlled execution from CRM to proposal.</small>
+                                {selectedProposalShareUrl && (
+                                  <div>
+                                    <span>Review link</span>
+                                    <small>{selectedProposalShareUrl}</small>
+                                  </div>
+                                )}
+                                <small>AM Premier Solutions | ampremiersolutions.com | elara@ampremiersolutions.com</small>
                               </footer>
                             </article>
                           </section>
