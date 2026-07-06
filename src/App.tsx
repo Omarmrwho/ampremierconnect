@@ -1334,13 +1334,21 @@ function App() {
     if (deleteError) {
       const { error } = await supabase.from('project_session_status').delete().eq('id', project.id)
       if (error) {
-        setProjectStatusMessage(`Workspace delete failed: ${deleteError}`)
+        setProjectStatusMessage(`Workspace delete failed: ${deleteError} Fallback delete also failed: ${error.message}`)
         return
       }
     }
 
     setProjectStatusMessage(`${project.project_name} deleted.`)
-    setSelectedActionProjectId(null)
+    setProjectStatuses((currentProjects) => currentProjects.filter((currentProject) => currentProject.id !== project.id))
+    setProjectTasks((currentTasks) => currentTasks.filter((task) => task.project_id !== project.id))
+    setProjectCrmRecords((currentRecords) => currentRecords.filter((record) => record.project_id !== project.id))
+    setProjectCampaigns((currentCampaigns) => currentCampaigns.filter((campaign) => campaign.project_id !== project.id))
+    setProjectCampaignActivities((currentActivities) => currentActivities.filter((activity) => activity.project_id !== project.id))
+    setProjectProposals((currentProposals) => currentProposals.filter((proposal) => proposal.project_id !== project.id))
+    setProjectIdeas((currentIdeas) => currentIdeas.filter((idea) => idea.project_id !== project.id))
+    setProjectAgentRecommendations((currentAgents) => currentAgents.filter((agent) => agent.project_id !== project.id))
+    setSelectedActionProjectId((currentProjectId) => (currentProjectId === project.id ? null : currentProjectId))
     await loadProjectStatuses()
     await loadCommandRecords()
   }
