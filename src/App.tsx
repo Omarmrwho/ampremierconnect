@@ -992,6 +992,54 @@ function App() {
         .filter((activity) => activity.campaign_id === selectedCampaign.id)
         .sort((left, right) => right.activity_date.localeCompare(left.activity_date))
     : []
+  const campaignReplyRows = [
+    ...responseCrmRecords
+      .filter((record) => !selectedActionProject || record.project_id === selectedActionProject.id)
+      .map((record) => {
+        const recordCampaign = record.campaign.trim().toLowerCase()
+        const matchedCampaign = selectedProjectCampaigns.find(
+          (campaign) =>
+            recordCampaign &&
+            (campaign.campaign_name.toLowerCase() === recordCampaign ||
+              campaign.campaign_name.toLowerCase().includes(recordCampaign) ||
+              recordCampaign.includes(campaign.campaign_name.toLowerCase())),
+        )
+
+        return {
+          id: `crm-${record.id}`,
+          source: 'CRM reply',
+          projectId: record.project_id,
+          campaignId: matchedCampaign?.id || '',
+          campaignName: record.campaign || matchedCampaign?.campaign_name || 'Campaign not tagged',
+          companyName: record.company_name,
+          contactName: record.contact_name || '',
+          contactEmail: record.email || 'No email captured',
+          replyDate: record.last_contacted_at?.slice(0, 10) || 'Date not logged',
+          outcome: record.response || record.stage,
+          nextStep: record.followUp || record.next_step || 'Review and assign follow-up.',
+        }
+      }),
+    ...projectCampaignActivities
+      .filter((activity) => activity.activity_type.toLowerCase().includes('reply'))
+      .filter((activity) => !selectedActionProject || activity.project_id === selectedActionProject.id)
+      .map((activity) => {
+        const campaign = projectCampaigns.find((currentCampaign) => currentCampaign.id === activity.campaign_id)
+
+        return {
+          id: `activity-${activity.id}`,
+          source: 'Campaign activity',
+          projectId: activity.project_id,
+          campaignId: activity.campaign_id,
+          campaignName: campaign?.campaign_name || 'Deleted or unknown campaign',
+          companyName: activity.owner || 'Contact not tagged',
+          contactName: activity.owner || '',
+          contactEmail: 'No email captured in activity',
+          replyDate: activity.activity_date,
+          outcome: activity.outcome || 'Reply logged without outcome.',
+          nextStep: activity.next_step || 'Review and assign follow-up.',
+        }
+      }),
+  ].sort((left, right) => right.replyDate.localeCompare(left.replyDate))
   const selectedProjectProposals = proposalTargetProject
     ? projectProposals.filter((proposal) => proposal.project_id === proposalTargetProject.id)
     : []
@@ -3616,6 +3664,68 @@ function App() {
                             Generate Campaign
                           </button>
                         </div>
+                        <section className="campaign-reply-tracker" aria-label="Campaign email replies">
+                          <div className="campaign-reply-head">
+                            <div>
+                              <span className="decision-label">Reply Tracker</span>
+                              <h3>{campaignReplyRows.length} campaign replies</h3>
+                              <p>See which emails replied, which campaign they came from, what happened, and the next follow-up.</p>
+                            </div>
+                            <div className="campaign-reply-stats" aria-label="Reply counts">
+                              <span>
+                                <strong>{campaignReplyRows.filter((reply) => reply.contactEmail !== 'No email captured in activity').length}</strong>
+                                with email
+                              </span>
+                              <span>
+                                <strong>{campaignReplyRows.filter((reply) => reply.source === 'Campaign activity').length}</strong>
+                                logged activities
+                              </span>
+                            </div>
+                          </div>
+                          {campaignReplyRows.length > 0 ? (
+                            <div className="campaign-reply-table-wrap">
+                              <table className="campaign-reply-table">
+                                <thead>
+                                  <tr>
+                                    <th>Email / Contact</th>
+                                    <th>Campaign</th>
+                                    <th>Reply</th>
+                                    <th>Next Step</th>
+                                    <th>Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {campaignReplyRows.map((reply) => (
+                                    <tr
+                                      key={reply.id}
+                                      onClick={() => {
+                                        if (reply.campaignId) {
+                                          setSelectedCampaignId(reply.campaignId)
+                                        }
+                                      }}
+                                    >
+                                      <td>
+                                        <strong>{reply.contactEmail}</strong>
+                                        <small>{reply.companyName || reply.contactName || 'Contact not tagged'}</small>
+                                      </td>
+                                      <td>
+                                        <strong>{reply.campaignName}</strong>
+                                        <small>{reply.source}</small>
+                                      </td>
+                                      <td>{reply.outcome}</td>
+                                      <td>{reply.nextStep}</td>
+                                      <td>{reply.replyDate}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="empty-inline-note">
+                              No replies are tagged to campaigns yet. Paste replies into CRM records with a Campaign value, or log a Reply in a campaign activity.
+                            </div>
+                          )}
+                        </section>
                         {selectedProjectCampaigns.length > 0 ? (
                           <>
                             <div className="crm-toolbar campaign-toolbar" aria-label="Campaign filters">

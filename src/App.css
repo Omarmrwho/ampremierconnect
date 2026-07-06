@@ -1358,6 +1358,118 @@ textarea {
   font-weight: 900;
 }
 
+.campaign-reply-tracker {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid rgba(19, 60, 79, 0.12);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.campaign-reply-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.campaign-reply-head h3 {
+  margin: 4px 0;
+  color: #10232b;
+  font-size: 20px;
+}
+
+.campaign-reply-head p {
+  margin: 0;
+  max-width: 680px;
+  color: #65737a;
+  line-height: 1.45;
+}
+
+.campaign-reply-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.campaign-reply-stats span {
+  display: grid;
+  gap: 2px;
+  min-width: 112px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  color: #65737a;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(19, 60, 79, 0.08);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.campaign-reply-stats strong {
+  color: #10232b;
+  font-size: 18px;
+}
+
+.campaign-reply-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(19, 60, 79, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.campaign-reply-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.campaign-reply-table th,
+.campaign-reply-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(19, 60, 79, 0.08);
+  color: #26373f;
+  text-align: left;
+  vertical-align: top;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.campaign-reply-table th {
+  color: #65737a;
+  background: #f4f7f5;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.campaign-reply-table tbody tr {
+  cursor: pointer;
+}
+
+.campaign-reply-table tbody tr:hover {
+  background: #f7faf8;
+}
+
+.campaign-reply-table td strong,
+.campaign-reply-table td small {
+  display: block;
+}
+
+.campaign-reply-table td strong {
+  color: #10232b;
+}
+
+.campaign-reply-table td small {
+  margin-top: 4px;
+  color: #7a858a;
+  font-size: 12px;
+  font-weight: 750;
+}
+
 .crm-table th {
   position: sticky;
   top: 0;
