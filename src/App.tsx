@@ -3198,6 +3198,9 @@ function App() {
             <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
               CRM
             </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/campaigns')}>
+              Campaigns
+            </button>
             <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
               Proposals
             </button>
@@ -3382,6 +3385,59 @@ function App() {
               </section>
             </div>
 
+            {isCommandRoute && (
+              <section className="command-replies-panel" aria-label="Recent campaign replies">
+                <div className="panel-heading">
+                  <MailCheck size={20} />
+                  <div>
+                    <h2>Recent Replies</h2>
+                    <p>Fast view of replies and response signals across campaigns.</p>
+                  </div>
+                </div>
+                {campaignReplyRows.length > 0 ? (
+                  <div className="command-reply-list">
+                    {campaignReplyRows.slice(0, 5).map((reply) => (
+                      <button
+                        type="button"
+                        className="command-reply-row"
+                        key={reply.id}
+                        onClick={() => {
+                          if (reply.projectId) {
+                            setSelectedActionProjectId(reply.projectId)
+                          }
+                          if (reply.campaignId) {
+                            setSelectedCampaignId(reply.campaignId)
+                          }
+                          navigateTo('/campaigns')
+                        }}
+                      >
+                        <span>
+                          <strong>{reply.contactEmail}</strong>
+                          <small>{reply.companyName || reply.contactName || 'Contact not tagged'}</small>
+                        </span>
+                        <span>
+                          <strong>{reply.campaignName}</strong>
+                          <small>{reply.projectName}</small>
+                        </span>
+                        <span>
+                          <strong>{reply.outcome}</strong>
+                          <small>{reply.replyDate}</small>
+                        </span>
+                      </button>
+                    ))}
+                    <button type="button" className="secondary-inline-action" onClick={() => navigateTo('/campaigns')}>
+                      Open full Reply Tracker
+                    </button>
+                  </div>
+                ) : (
+                  <div className="empty-inline-note">
+                    No campaign replies are logged yet. When a CRM record has Reply/Response text or a campaign activity
+                    has a response outcome, it will appear here.
+                  </div>
+                )}
+              </section>
+            )}
+
             {selectedActionProject && (
               <section className="decision-drawer" aria-label="Decision detail" ref={decisionDrawerRef}>
                 <div className="panel-heading">
@@ -3416,7 +3472,7 @@ function App() {
                     </div>
                   </dl>
                 </div>
-                {selectedWorkspace && isProposalsRoute && (
+                {selectedWorkspace && (isCrmRoute || isCampaignsRoute || isProposalsRoute) && (
                   <div className="workspace-command-center">
                     <div className="workspace-hero">
                       <div>
