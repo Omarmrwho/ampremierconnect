@@ -295,6 +295,22 @@ type ParsedCrmRecord = ProjectCrmRecord & {
   followUp: string
 }
 
+type CampaignReplyRow = {
+  id: string
+  source: string
+  projectId: string
+  projectName: string
+  campaignId: string
+  campaignName: string
+  companyName: string
+  contactName: string
+  contactEmail: string
+  replyDate: string
+  outcome: string
+  replyBody: string
+  nextStep: string
+}
+
 const workspaceTabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'command', label: 'Command' },
   { id: 'construction', label: 'Schedule' },
@@ -751,6 +767,12 @@ const getCrmField = (details: string | null, label: string) => {
   return match?.[1]?.trim() || ''
 }
 
+const getReadableReplyBody = (details: string | null, fallback: string) => {
+  const fullBody = getCrmField(details, 'Body') || getCrmField(details, 'Message')
+  const response = getCrmField(details, 'Response') || getCrmField(details, 'Reply')
+  return fullBody || response || fallback || 'No readable reply text was saved for this row yet.'
+}
+
 const responseSignalPattern =
   /\b(reply|replied|response|responded|interested|not a fit|not-fit|no thanks|opt[- ]?out|unsubscribe|bounce|bounced|meeting|call booked|scheduled|warm|positive|negative)\b/i
 
@@ -839,6 +861,7 @@ function App() {
   const [campaignStatusFilter, setCampaignStatusFilter] = useState('all')
   const [campaignActivityFilter, setCampaignActivityFilter] = useState<CampaignActivityFilter>('all')
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
+  const [selectedReplyId, setSelectedReplyId] = useState<string | null>(null)
   const [projectProposals, setProjectProposals] = useState<ProjectProposal[]>([])
   const [proposalSearch, setProposalSearch] = useState('')
   const [proposalStatusFilter, setProposalStatusFilter] = useState<ProposalFilter>('all')
@@ -1015,7 +1038,7 @@ function App() {
         .filter((activity) => activity.campaign_id === selectedCampaign.id)
         .sort((left, right) => right.activity_date.localeCompare(left.activity_date))
     : []
-  const campaignActivityRows = projectCampaignActivities
+  const campaignActivityRows: CampaignReplyRow[] = projectCampaignActivities
     .filter((activity) => hasResponseSignal(activity.activity_type, activity.outcome, activity.next_step))
     .filter((activity) => visibleReplyProjectIds.has(activity.project_id))
     .map((activity) => {
@@ -1033,10 +1056,11 @@ function App() {
         contactEmail: 'No email captured in activity',
         replyDate: activity.activity_date,
         outcome: activity.outcome || activity.activity_type || 'Activity logged without outcome.',
+        replyBody: activity.outcome || activity.next_step || activity.activity_type || 'Activity logged without readable reply text.',
         nextStep: activity.next_step || 'Review and assign follow-up.',
       }
     })
-  const campaignReplyRows = [
+  const campaignReplyRows: CampaignReplyRow[] = [
     ...responseCrmRecords
       .filter((record) => visibleReplyProjectIds.has(record.project_id))
       .map((record) => {
@@ -1054,11 +1078,16 @@ function App() {
           contactEmail: record.email || 'No email captured',
           replyDate: record.last_contacted_at?.slice(0, 10) || 'Date not logged',
           outcome: record.response || record.stage || 'Response logged',
+          replyBody: getReadableReplyBody(record.next_step, record.response || record.stage),
           nextStep: record.followUp || record.next_step || 'Review and assign follow-up.',
         }
       }),
     ...campaignActivityRows,
   ].sort((left, right) => right.replyDate.localeCompare(left.replyDate))
+  const selectedReply =
+    campaignReplyRows.find((reply) => reply.id === selectedReplyId) ||
+    campaignReplyRows[0] ||
+    null
   const selectedProjectProposals = proposalTargetProject
     ? projectProposals.filter((proposal) => proposal.project_id === proposalTargetProject.id)
     : []
@@ -3418,6 +3447,7 @@ function App() {
                           if (reply.campaignId) {
                             setSelectedCampaignId(reply.campaignId)
                           }
+                          setSelectedReplyId(reply.id)
                           navigateTo('/campaigns')
                         }}
                       >
@@ -3813,11 +3843,13 @@ function App() {
                                 <tbody>
                                   {campaignReplyRows.map((reply) => (
                                     <tr
+                                      className={selectedReply?.id === reply.id ? 'selected' : ''}
                                       key={reply.id}
                                       onClick={() => {
                                         if (reply.campaignId) {
                                           setSelectedCampaignId(reply.campaignId)
                                         }
+                                        setSelectedReplyId(reply.id)
                                       }}
                                     >
                                       <td>
@@ -3845,6 +3877,46 @@ function App() {
 	                              No replies are synced into the portal yet. If replies came into the mailbox, import or log them
 	                              into CRM/campaign activity so they appear here with the correct campaign.
 	                            </div>
+                          )}
+                          {selectedReply && (
+                            <aside className="reply-detail-panel" aria-label="Selected reply detail">
+                              <div className="reply-detail-head">
+                                <div>
+                                  <span className="decision-label">{selectedReply.source}</span>
+                                  <h3>{selectedReply.contactEmail}</h3>
+                                  <p>{selectedReply.companyName || selectedReply.contactName || 'Contact not tagged'}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="secondary-inline-action"
+                                  onClick={() => setSelectedReplyId(null)}
+                                >
+                                  Clear selection
+                                </button>
+                              </div>
+                              <dl className="reply-detail-meta">
+                                <div>
+                                  <dt>Workspace</dt>
+                                  <dd>{selectedReply.projectName}</dd>
+                                </div>
+                                <div>
+                                  <dt>Campaign</dt>
+                                  <dd>{selectedReply.campaignName}</dd>
+                                </div>
+                                <div>
+                                  <dt>Date</dt>
+                                  <dd>{selectedReply.replyDate}</dd>
+                                </div>
+                              </dl>
+                              <div className="reply-body-card">
+                                <span className="decision-label">Reply Text</span>
+                                <p>{selectedReply.replyBody}</p>
+                              </div>
+                              <div className="reply-body-card muted">
+                                <span className="decision-label">Next Step</span>
+                                <p>{selectedReply.nextStep}</p>
+                              </div>
+                            </aside>
                           )}
                         </section>
                         {selectedProjectCampaigns.length > 0 ? (

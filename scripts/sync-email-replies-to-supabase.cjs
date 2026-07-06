@@ -126,11 +126,29 @@ function clean(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function bodyText(message) {
+  const content = String(message.body?.content || '');
+  if (!content) return '';
+  return clean(content
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'"));
+}
+
 function messageSummary(message) {
   return clean([
     `Subject: ${message.subject || '(no subject)'}`,
     message.bodyPreview ? `Preview: ${message.bodyPreview}` : '',
-  ].filter(Boolean).join(' | ')).slice(0, 1200);
+    bodyText(message) ? `Body: ${bodyText(message).slice(0, 2500)}` : '',
+  ].filter(Boolean).join(' | ')).slice(0, 3500);
 }
 
 function shouldConsider(message) {
@@ -228,7 +246,7 @@ async function main() {
   const query = [
     `/me/mailFolders/inbox/messages?$top=${top}`,
     '$orderby=receivedDateTime desc',
-    '$select=id,receivedDateTime,subject,from,bodyPreview,conversationId,internetMessageId',
+    '$select=id,receivedDateTime,subject,from,bodyPreview,body,conversationId,internetMessageId',
   ].join('&');
   const inbox = await graph(query);
   const messages = (inbox.value || []).filter((message) => message.receivedDateTime >= since).filter(shouldConsider);
