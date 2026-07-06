@@ -1081,6 +1081,26 @@ function App() {
   }, [isInternal, isCommandRoute, isCrmRoute, isProposalsRoute, selectedActionProjectId, operatingProjects])
 
   useEffect(() => {
+    if (!isInternal || (!isCommandRoute && !isCrmRoute && !isProposalsRoute) || !selectedActionProjectId) {
+      return
+    }
+
+    if (operatingProjects.some((project) => project.id === selectedActionProjectId)) {
+      return
+    }
+
+    setSelectedActionProjectId(projectStatuses[0]?.id || operatingProjects[0]?.id || null)
+  }, [
+    isInternal,
+    isCommandRoute,
+    isCrmRoute,
+    isProposalsRoute,
+    selectedActionProjectId,
+    operatingProjects,
+    projectStatuses,
+  ])
+
+  useEffect(() => {
     if (!selectedActionProjectId) {
       return
     }
