@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY
 
 const json = (response: any, status: number, payload: unknown) => {
   response.status(status).json(payload)
@@ -20,8 +20,16 @@ export default async function handler(request: any, response: any) {
     return
   }
 
-  if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
-    json(response, 500, { error: 'Supabase server environment variables are not configured.' })
+  const missingEnvironment = [
+    !supabaseUrl ? 'VITE_SUPABASE_URL or SUPABASE_URL' : '',
+    !supabaseAnonKey ? 'VITE_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY' : '',
+    !serviceRoleKey ? 'SUPABASE_SERVICE_ROLE_KEY' : '',
+  ].filter(Boolean)
+
+  if (missingEnvironment.length > 0) {
+    json(response, 500, {
+      error: `Workspace delete is not configured on the server. Missing Vercel environment variable: ${missingEnvironment.join(', ')}.`,
+    })
     return
   }
 

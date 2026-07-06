@@ -46,6 +46,7 @@ If those still appear, wait and refresh Vercel's domain screen.
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
 - Redeploy after adding environment variables.
