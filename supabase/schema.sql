@@ -364,6 +364,13 @@ to authenticated
 using (public.is_internal_admin())
 with check (public.is_internal_admin());
 
+drop policy if exists "Internal admins can delete project session status" on public.project_session_status;
+create policy "Internal admins can delete project session status"
+on public.project_session_status
+for delete
+to authenticated
+using (public.is_internal_admin());
+
 drop policy if exists "Internal admins can manage project crm records" on public.project_crm_records;
 create policy "Internal admins can manage project crm records"
 on public.project_crm_records

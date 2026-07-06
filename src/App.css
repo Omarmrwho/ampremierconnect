@@ -503,6 +503,12 @@ textarea {
   gap: 8px;
 }
 
+.crm-project-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 7px;
+}
+
 .crm-project-list button {
   display: grid;
   gap: 4px;
@@ -522,6 +528,59 @@ textarea {
 
 .crm-project-list button.active span {
   color: rgba(255, 255, 255, 0.74);
+}
+
+.crm-project-list .project-delete-button {
+  display: inline-grid;
+  min-height: 74px;
+  place-items: center;
+  padding: 0;
+  color: #8a2d1f;
+  background: #fbe7e2;
+}
+
+.crm-replies-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 1px solid rgba(15, 81, 50, 0.18);
+  border-radius: 8px;
+  background: #f7fcf8;
+}
+
+.crm-replies-panel h3 {
+  margin: 3px 0 5px;
+  color: #10232b;
+}
+
+.crm-replies-panel p,
+.empty-inline-note {
+  margin: 0;
+  color: #65737a;
+}
+
+.crm-replies-list {
+  display: grid;
+  gap: 8px;
+}
+
+.crm-replies-list button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 81, 50, 0.16);
+  border-radius: 8px;
+  color: #174531;
+  background: #ffffff;
+  text-align: left;
+}
+
+.crm-replies-list span {
+  color: #526168;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .crm-toolbar {
@@ -780,6 +839,28 @@ textarea {
   display: grid;
   gap: 14px;
   margin: 0 0 14px;
+}
+
+.generated-proposal-callout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 14px;
+  padding: 16px;
+  border: 1px solid rgba(15, 81, 50, 0.22);
+  border-radius: 8px;
+  background: #f0fbf3;
+}
+
+.generated-proposal-callout h3 {
+  margin: 3px 0 6px;
+  color: #10232b;
+}
+
+.generated-proposal-callout p {
+  margin: 0;
+  color: #526168;
 }
 
 .proposal-project-picker {
@@ -2360,6 +2441,23 @@ textarea {
 
 .project-card-top > div {
   min-width: 0;
+}
+
+.project-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.project-card-actions button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  color: #8a2d1f;
+  background: #fbe7e2;
 }
 
 .project-card h3 {

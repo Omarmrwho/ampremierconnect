@@ -808,6 +808,7 @@ function App() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [projectProposals, setProjectProposals] = useState<ProjectProposal[]>([])
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
+  const [lastGeneratedProposalId, setLastGeneratedProposalId] = useState<string | null>(null)
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
   const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
@@ -854,6 +855,8 @@ function App() {
     ? projectCrmRecords.filter((record) => record.project_id === selectedActionProject.id)
     : []
   const parsedSelectedProjectCrmRecords = selectedProjectCrmRecords.map(parseCrmRecord)
+  const parsedAllCrmRecords = projectCrmRecords.map(parseCrmRecord)
+  const responseCrmRecords = parsedAllCrmRecords.filter((record) => record.hasResponse)
   const crmFilterOptions = {
     stages: ['all', ...Array.from(new Set(parsedSelectedProjectCrmRecords.map((record) => record.stage).filter(Boolean))).sort()],
     segments: ['all', ...Array.from(new Set(parsedSelectedProjectCrmRecords.map((record) => record.segment).filter(Boolean))).sort()],
@@ -965,6 +968,8 @@ function App() {
     : []
   const selectedProposal =
     selectedProjectProposals.find((proposal) => proposal.id === selectedProposalId) || selectedProjectProposals[0] || null
+  const lastGeneratedProposal =
+    projectProposals.find((proposal) => proposal.id === lastGeneratedProposalId) || selectedProposal
   const selectedProposalShareUrl = selectedProposal
     ? `${window.location.origin}/proposals?proposal=${selectedProposal.id}`
     : ''
@@ -1266,6 +1271,57 @@ function App() {
     setProjectStatusMessage('Project workspace created.')
     await loadProjectStatuses()
     setSelectedActionProjectId(data.id)
+  }
+
+  const deleteProjectWorkspace = async (project: ProjectSessionStatus) => {
+    if (!supabase || !persistedProjectIds.has(project.id)) {
+      setProjectStatusMessage('Starter workspace cannot be deleted from Supabase because it is only a local placeholder.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Delete workspace "${project.project_name}" and its CRM/proposal records? This cannot be undone.`,
+    )
+    if (!confirmed) {
+      return
+    }
+
+    setProjectStatusMessage(`Deleting ${project.project_name}...`)
+    let deleteError = ''
+
+    if (session?.access_token) {
+      try {
+        const response = await fetch('/api/delete-project', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ projectId: project.id }),
+        })
+        const payload = await response.json().catch(() => null)
+        if (!response.ok) {
+          deleteError = String(payload?.error || 'Workspace delete API failed.')
+        }
+      } catch (error) {
+        deleteError = error instanceof Error ? error.message : 'Workspace delete API failed.'
+      }
+    } else {
+      deleteError = 'Portal session is missing. Sign in again before deleting a workspace.'
+    }
+
+    if (deleteError) {
+      const { error } = await supabase.from('project_session_status').delete().eq('id', project.id)
+      if (error) {
+        setProjectStatusMessage(`Workspace delete failed: ${deleteError}`)
+        return
+      }
+    }
+
+    setProjectStatusMessage(`${project.project_name} deleted.`)
+    setSelectedActionProjectId(null)
+    await loadProjectStatuses()
+    await loadCommandRecords()
   }
 
   const createCommandRecord = async (event: FormEvent<HTMLFormElement>, table: CommandTable) => {
@@ -1725,6 +1781,7 @@ function App() {
     event.currentTarget.reset()
     setSelectedActionProjectId(proposalTargetProject.id)
     setSelectedProposalId(data.id)
+    setLastGeneratedProposalId(data.id)
     setProjectProposals((currentProposals) => [data, ...currentProposals.filter((proposal) => proposal.id !== data.id)])
     setCommandDataStatus('Proposal generated. Branded preview, download, and copy link are ready.')
     await loadCommandRecords()
@@ -2100,15 +2157,26 @@ function App() {
                 </div>
                 <div className="crm-project-list">
                   {operatingProjects.map((project) => (
-                    <button
-                      type="button"
-                      className={selectedActionProjectId === project.id ? 'active' : ''}
-                      key={project.id}
-                      onClick={() => setSelectedActionProjectId(project.id)}
-                    >
-                      <strong>{project.project_name}</strong>
-                      <span>{project.client_name || 'Internal project'}</span>
-                    </button>
+                    <div className="crm-project-list-item" key={project.id}>
+                      <button
+                        type="button"
+                        className={selectedActionProjectId === project.id ? 'active' : ''}
+                        onClick={() => setSelectedActionProjectId(project.id)}
+                      >
+                        <strong>{project.project_name}</strong>
+                        <span>{project.client_name || 'Internal project'}</span>
+                      </button>
+                      {persistedProjectIds.has(project.id) && (
+                        <button
+                          type="button"
+                          className="project-delete-button"
+                          onClick={() => deleteProjectWorkspace(project)}
+                          aria-label={`Delete ${project.project_name}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </aside>
@@ -2148,6 +2216,36 @@ function App() {
                     <span>{projectStatusMessage}</span>
                   </div>
                 )}
+
+                <section className="crm-replies-panel" aria-label="Email replies">
+                  <div>
+                    <span className="decision-label">Email Replies</span>
+                    <h3>{responseCrmRecords.length} logged responses</h3>
+                    <p>Replies will appear here once they are logged or synced into CRM records.</p>
+                  </div>
+                  {responseCrmRecords.length > 0 ? (
+                    <div className="crm-replies-list">
+                      {responseCrmRecords.slice(0, 6).map((record) => (
+                        <button
+                          type="button"
+                          key={record.id}
+                          onClick={() => {
+                            setSelectedActionProjectId(record.project_id)
+                            setSelectedCrmRecordId(record.id)
+                            setCrmGapFilter('has-response')
+                          }}
+                        >
+                          <strong>{record.company_name}</strong>
+                          <span>{record.response || record.followUp}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-inline-note">
+                      No email replies are synced into the CRM yet. Paste a reply into a CRM record for now; mailbox auto-sync is the next backend piece.
+                    </div>
+                  )}
+                </section>
 
                 <div className="crm-toolbar" aria-label="CRM record filters">
                   <label>
@@ -3529,6 +3627,48 @@ function App() {
                             </select>
                           </label>
                         </div>
+                        {lastGeneratedProposal && (
+                          <section className="generated-proposal-callout" aria-label="Generated proposal result">
+                            <div>
+                              <span className="decision-label">Generated Proposal</span>
+                              <h3>{lastGeneratedProposal.company_name}</h3>
+                              <p>
+                                Your latest proposal is ready below. Use the buttons here or scroll to the branded preview.
+                              </p>
+                            </div>
+                            <div className="proposal-actions">
+                              <button type="button" onClick={printSelectedProposal}>
+                                Download PDF <Download size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  window.open(
+                                    `${window.location.origin}/proposals?proposal=${lastGeneratedProposal.id}`,
+                                    '_blank',
+                                    'noopener,noreferrer',
+                                  )
+                                }
+                              >
+                                Open Link <ExternalLink size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const url = `${window.location.origin}/proposals?proposal=${lastGeneratedProposal.id}`
+                                  try {
+                                    await navigator.clipboard.writeText(url)
+                                    setCommandDataStatus('Proposal review link copied.')
+                                  } catch {
+                                    setCommandDataStatus(url)
+                                  }
+                                }}
+                              >
+                                Copy Link <Link size={16} />
+                              </button>
+                            </div>
+                          </section>
+                        )}
                         {selectedProjectProposals.length > 0 ? (
                           <div className="proposal-table-wrap">
                             <table className="campaign-table proposal-table">
@@ -4068,10 +4208,24 @@ function App() {
                         <h3>{project.project_name}</h3>
                         <p>{project.client_name || 'Internal project'}</p>
                       </div>
-                      <span className={`health-pill ${project.health}`}>
-                        {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
-                        {project.status}
-                      </span>
+                      <div className="project-card-actions">
+                        <span className={`health-pill ${project.health}`}>
+                          {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
+                          {project.status}
+                        </span>
+                        {persistedProjectIds.has(project.id) && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              deleteProjectWorkspace(project)
+                            }}
+                            aria-label={`Delete ${project.project_name}`}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className={`project-progress ${project.health}`} aria-label={`${project.project_name} progress`}>
                       <div className="project-progress-label">
