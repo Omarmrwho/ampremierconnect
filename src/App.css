@@ -835,6 +835,199 @@ textarea {
   background: #ffffff;
 }
 
+.proposal-database {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.proposal-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.proposal-metric-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid rgba(19, 60, 79, 0.11);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.proposal-metric-grid span,
+.proposal-record-value small,
+.proposal-progress-row small,
+.proposal-record-next {
+  color: #65737a;
+  font-size: 12px;
+}
+
+.proposal-metric-grid strong {
+  color: #10232b;
+  font-size: 26px;
+}
+
+.proposal-database-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px);
+  gap: 12px;
+}
+
+.proposal-database-toolbar label {
+  display: grid;
+  gap: 7px;
+  color: #5d6f78;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.proposal-database-toolbar input,
+.proposal-database-toolbar select {
+  min-height: 42px;
+  border: 1px solid rgba(19, 60, 79, 0.16);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #133c4f;
+  background: #ffffff;
+  font: inherit;
+  text-transform: none;
+}
+
+.proposal-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.proposal-record-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(19, 60, 79, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.proposal-record-card.selected {
+  border-color: rgba(15, 81, 50, 0.42);
+  box-shadow: 0 0 0 3px rgba(15, 81, 50, 0.08);
+}
+
+.proposal-record-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.proposal-record-main h3 {
+  margin: 4px 0 5px;
+  color: #10232b;
+}
+
+.proposal-record-main p,
+.proposal-record-next {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.proposal-record-value {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  justify-items: end;
+}
+
+.proposal-progress-row {
+  display: grid;
+  grid-template-columns: minmax(155px, auto) minmax(180px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.proposal-progress-row > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.proposal-stage-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #133c4f;
+  background: #e7efe9;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.proposal-stage-pill.opened,
+.proposal-stage-pill.read,
+.proposal-stage-pill.commented {
+  color: #775f08;
+  background: #fff2be;
+}
+
+.proposal-stage-pill.signed,
+.proposal-stage-pill.accepted {
+  color: #0f5132;
+  background: #dff5e7;
+}
+
+.proposal-stage-pill.declined {
+  color: #8a1f1f;
+  background: #ffe1df;
+}
+
+.proposal-progress-track {
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: #e7efe9;
+}
+
+.proposal-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #133c4f, #0f7b55);
+}
+
+.proposal-stage-buttons,
+.proposal-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.proposal-stage-buttons button,
+.proposal-record-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #133c4f;
+  background: #eef4ef;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.proposal-stage-buttons button.active {
+  color: #ffffff;
+  background: #133c4f;
+}
+
 .proposal-preview-panel {
   display: grid;
   gap: 14px;
@@ -2988,6 +3181,17 @@ textarea {
   .proposal-doc-meta,
   .proposal-cover-media {
     grid-template-columns: 1fr;
+  }
+
+  .proposal-metric-grid,
+  .proposal-database-toolbar,
+  .proposal-record-main,
+  .proposal-progress-row {
+    grid-template-columns: 1fr;
+  }
+
+  .proposal-record-value {
+    justify-items: start;
   }
 
   .proposal-cover-media div {

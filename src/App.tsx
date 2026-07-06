@@ -121,10 +121,23 @@ const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as co
 const crmGapFilters = ['all', 'has-response', 'missing-phone', 'missing-source', 'missing-fit'] as const
 const crmBulkStages = ['follow-up', 'qualified', 'proposal', 'won', 'dead'] as const
 const campaignActivityFilters = ['all', 'has-activity', 'no-activity'] as const
+const proposalPipelineStages = [
+  { id: 'draft', label: 'Draft', progress: 12 },
+  { id: 'ready', label: 'Ready', progress: 24 },
+  { id: 'sent', label: 'Sent', progress: 38 },
+  { id: 'opened', label: 'Opened', progress: 52 },
+  { id: 'read', label: 'Read', progress: 66 },
+  { id: 'commented', label: 'Commented', progress: 78 },
+  { id: 'signed', label: 'Signed', progress: 92 },
+  { id: 'accepted', label: 'Accepted', progress: 100 },
+  { id: 'declined', label: 'Declined', progress: 100 },
+] as const
+const proposalFilterOptions = ['all', ...proposalPipelineStages.map((stage) => stage.id)] as const
 
 type ProjectFilter = (typeof projectFilters)[number]
 type CrmGapFilter = (typeof crmGapFilters)[number]
 type CampaignActivityFilter = (typeof campaignActivityFilters)[number]
+type ProposalFilter = (typeof proposalFilterOptions)[number]
 type ProjectOperatingStatus = ProjectSessionStatus['status']
 type WorkspaceTab = 'command' | 'construction' | 'crm' | 'campaigns' | 'proposals' | 'ideas' | 'agents'
 
@@ -258,7 +271,14 @@ type ProjectAgentRecommendation = {
   status: string
 }
 
-type CommandTable = 'project_tasks' | 'project_crm_records' | 'project_campaigns' | 'project_ideas' | 'project_agent_recommendations'
+type CommandTable =
+  | 'project_tasks'
+  | 'project_crm_records'
+  | 'project_campaigns'
+  | 'project_proposals'
+  | 'project_ideas'
+  | 'project_agent_recommendations'
+type CreatableCommandTable = Exclude<CommandTable, 'project_proposals'>
 
 type ParsedCrmRecord = ProjectCrmRecord & {
   email: string
@@ -768,6 +788,12 @@ const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
   }
 }
 
+const getProposalStage = (status: string) =>
+  proposalPipelineStages.find((stage) => stage.id === status) || proposalPipelineStages[0]
+
+const getProposalProjectName = (proposal: ProjectProposal, projects: ProjectSessionStatus[]) =>
+  projects.find((project) => project.id === proposal.project_id)?.project_name || 'Deleted or unknown workspace'
+
 function App() {
   const [routePath, setRoutePath] = useState(() => window.location.pathname)
   const [selectedRole, setSelectedRole] = useState<(typeof roles)[number]>('Client')
@@ -808,6 +834,8 @@ function App() {
   const [campaignActivityFilter, setCampaignActivityFilter] = useState<CampaignActivityFilter>('all')
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
   const [projectProposals, setProjectProposals] = useState<ProjectProposal[]>([])
+  const [proposalSearch, setProposalSearch] = useState('')
+  const [proposalStatusFilter, setProposalStatusFilter] = useState<ProposalFilter>('all')
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
   const [lastGeneratedProposalId, setLastGeneratedProposalId] = useState<string | null>(null)
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
@@ -967,8 +995,40 @@ function App() {
   const selectedProjectProposals = proposalTargetProject
     ? projectProposals.filter((proposal) => proposal.project_id === proposalTargetProject.id)
     : []
+  const proposalSearchText = proposalSearch.trim().toLowerCase()
+  const filteredProjectProposals = projectProposals.filter((proposal) => {
+    const matchesStatus = proposalStatusFilter === 'all' || proposal.status === proposalStatusFilter
+    const matchesSearch = proposalSearchText
+      ? [
+          proposal.company_name,
+          proposal.directed_to,
+          proposal.contact_email,
+          proposal.price,
+          proposal.status,
+          proposal.next_step,
+          proposal.scope_summary,
+          getProposalProjectName(proposal, projectStatuses),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(proposalSearchText)
+      : true
+
+    return matchesStatus && matchesSearch
+  })
+  const proposalPipelineMetrics = {
+    total: projectProposals.length,
+    active: projectProposals.filter((proposal) => !['accepted', 'declined'].includes(proposal.status)).length,
+    opened: projectProposals.filter((proposal) => ['opened', 'read', 'commented', 'signed', 'accepted'].includes(proposal.status)).length,
+    signed: projectProposals.filter((proposal) => ['signed', 'accepted'].includes(proposal.status)).length,
+    attention: projectProposals.filter((proposal) => ['commented', 'declined'].includes(proposal.status)).length,
+  }
   const selectedProposal =
-    selectedProjectProposals.find((proposal) => proposal.id === selectedProposalId) || selectedProjectProposals[0] || null
+    projectProposals.find((proposal) => proposal.id === selectedProposalId) ||
+    selectedProjectProposals[0] ||
+    filteredProjectProposals[0] ||
+    null
   const lastGeneratedProposal =
     projectProposals.find((proposal) => proposal.id === lastGeneratedProposalId) || selectedProposal
   const selectedProposalShareUrl = selectedProposal
@@ -1119,6 +1179,8 @@ function App() {
     setCampaignSearch('')
     setCampaignStatusFilter('all')
     setCampaignActivityFilter('all')
+    setProposalSearch('')
+    setProposalStatusFilter('all')
     setCrmStageFilter('all')
     setCrmSegmentFilter('all')
     setCrmCampaignFilter('all')
@@ -1353,7 +1415,7 @@ function App() {
     await loadCommandRecords()
   }
 
-  const createCommandRecord = async (event: FormEvent<HTMLFormElement>, table: CommandTable) => {
+  const createCommandRecord = async (event: FormEvent<HTMLFormElement>, table: CreatableCommandTable) => {
     event.preventDefault()
     if (!selectedActionProject || !supabase) {
       return
@@ -1367,7 +1429,7 @@ function App() {
       updated_at: new Date().toISOString(),
     }
 
-    const payloadByTable: Record<CommandTable, Record<string, string | number | null>> = {
+    const payloadByTable: Record<CreatableCommandTable, Record<string, string | number | null>> = {
       project_tasks: {
         ...baseRecord,
         task_name: String(formData.get('taskName')),
@@ -3859,48 +3921,143 @@ function App() {
                             </div>
                           </section>
                         )}
-                        {selectedProjectProposals.length > 0 ? (
-                          <div className="proposal-table-wrap">
-                            <table className="campaign-table proposal-table">
-                              <thead>
-                                <tr>
-                                  <th>Company</th>
-                                  <th>Directed To</th>
-                                  <th>Date</th>
-                                  <th>Price</th>
-                                  <th>Status</th>
-                                  <th>Next Step</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {selectedProjectProposals.map((proposal) => (
-                                  <tr
-                                    className={selectedProposal?.id === proposal.id ? 'selected' : ''}
-                                    key={proposal.id}
-                                    onClick={() => setSelectedProposalId(proposal.id)}
-                                  >
-                                    <td>
-                                      <strong>{proposal.company_name}</strong>
-                                      <small>{proposal.company_address || 'No address captured'}</small>
-                                    </td>
-                                    <td>
-                                      {proposal.directed_to}
-                                      <small>{proposal.contact_title || proposal.contact_email || 'Contact details pending'}</small>
-                                    </td>
-                                    <td>
-                                      {proposal.proposal_date}
-                                      <small>{proposal.proposal_time || 'Time not set'}</small>
-                                    </td>
-                                    <td>{proposal.price || 'TBD'}</td>
-                                    <td>
-                                      <span className="crm-stage-pill">{proposal.status}</span>
-                                    </td>
-                                    <td>{proposal.next_step || proposal.scope_summary || 'Prepare and send proposal'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                        {projectProposals.length > 0 ? (
+                          <section className="proposal-database" aria-label="Proposal database">
+                            <div className="proposal-metric-grid">
+                              <div>
+                                <span>Total</span>
+                                <strong>{proposalPipelineMetrics.total}</strong>
+                              </div>
+                              <div>
+                                <span>Active</span>
+                                <strong>{proposalPipelineMetrics.active}</strong>
+                              </div>
+                              <div>
+                                <span>Opened / read</span>
+                                <strong>{proposalPipelineMetrics.opened}</strong>
+                              </div>
+                              <div>
+                                <span>Signed</span>
+                                <strong>{proposalPipelineMetrics.signed}</strong>
+                              </div>
+                              <div>
+                                <span>Needs attention</span>
+                                <strong>{proposalPipelineMetrics.attention}</strong>
+                              </div>
+                            </div>
+                            <div className="proposal-database-toolbar">
+                              <label>
+                                Search proposals
+                                <input
+                                  type="search"
+                                  value={proposalSearch}
+                                  onChange={(event) => setProposalSearch(event.target.value)}
+                                  placeholder="Company, recipient, project, status..."
+                                />
+                              </label>
+                              <label>
+                                Pipeline status
+                                <select
+                                  value={proposalStatusFilter}
+                                  onChange={(event) => setProposalStatusFilter(event.target.value as ProposalFilter)}
+                                >
+                                  {proposalFilterOptions.map((status) => (
+                                    <option key={status} value={status}>
+                                      {status === 'all' ? 'All proposals' : getProposalStage(status).label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                            {filteredProjectProposals.length > 0 ? (
+                              <div className="proposal-card-list">
+                                {filteredProjectProposals.map((proposal) => {
+                                  const stage = getProposalStage(proposal.status)
+                                  const shareUrl = `${window.location.origin}/proposals?proposal=${proposal.id}`
+
+                                  return (
+                                    <article
+                                      className={`proposal-record-card ${selectedProposal?.id === proposal.id ? 'selected' : ''}`}
+                                      key={proposal.id}
+                                    >
+                                      <button
+                                        type="button"
+                                        className="proposal-record-main"
+                                        onClick={() => setSelectedProposalId(proposal.id)}
+                                      >
+                                        <div>
+                                          <span className="decision-label">{getProposalProjectName(proposal, projectStatuses)}</span>
+                                          <h3>{proposal.company_name}</h3>
+                                          <p>
+                                            {proposal.directed_to}
+                                            {proposal.contact_title ? ` | ${proposal.contact_title}` : ''}
+                                            {proposal.contact_email ? ` | ${proposal.contact_email}` : ''}
+                                          </p>
+                                        </div>
+                                        <div className="proposal-record-value">
+                                          <strong>{proposal.price || 'TBD'}</strong>
+                                          <small>{proposal.proposal_date}</small>
+                                        </div>
+                                      </button>
+                                      <div className="proposal-progress-row">
+                                        <div>
+                                          <span className={`proposal-stage-pill ${proposal.status}`}>{stage.label}</span>
+                                          <small>{stage.progress}% through pipeline</small>
+                                        </div>
+                                        <div className="proposal-progress-track" aria-label={`${stage.label} progress`}>
+                                          <span style={{ width: `${stage.progress}%` }} />
+                                        </div>
+                                      </div>
+                                      <div className="proposal-stage-buttons" aria-label="Proposal stage controls">
+                                        {proposalPipelineStages.map((pipelineStage) => (
+                                          <button
+                                            type="button"
+                                            key={pipelineStage.id}
+                                            className={proposal.status === pipelineStage.id ? 'active' : ''}
+                                            onClick={() => updateCommandRecordStatus('project_proposals', proposal.id, pipelineStage.id)}
+                                          >
+                                            {pipelineStage.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                      <div className="proposal-record-actions">
+                                        <button type="button" onClick={() => setSelectedProposalId(proposal.id)}>
+                                          Preview
+                                        </button>
+                                        <button type="button" onClick={() => window.open(shareUrl, '_blank', 'noopener,noreferrer')}>
+                                          Open Link <ExternalLink size={15} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            try {
+                                              await navigator.clipboard.writeText(shareUrl)
+                                              setCommandDataStatus('Proposal review link copied.')
+                                            } catch {
+                                              setCommandDataStatus(shareUrl)
+                                            }
+                                          }}
+                                        >
+                                          Copy Link <Link size={15} />
+                                        </button>
+                                      </div>
+                                      <p className="proposal-record-next">
+                                        {proposal.next_step || proposal.scope_summary || 'No next step captured yet.'}
+                                      </p>
+                                    </article>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <article className="empty-project-state">
+                                <Filter size={22} />
+                                <div>
+                                  <h3>No matching proposals.</h3>
+                                  <p>Clear the search or switch the pipeline filter.</p>
+                                </div>
+                              </article>
+                            )}
+                          </section>
                         ) : (
                           <article className="empty-project-state">
                             <FileText size={22} />
@@ -4052,6 +4209,10 @@ function App() {
                               <option value="draft">Draft</option>
                               <option value="ready">Ready</option>
                               <option value="sent">Sent</option>
+                              <option value="opened">Opened</option>
+                              <option value="read">Read</option>
+                              <option value="commented">Commented</option>
+                              <option value="signed">Signed</option>
                               <option value="accepted">Accepted</option>
                               <option value="declined">Declined</option>
                             </select>
