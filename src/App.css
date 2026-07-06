@@ -782,6 +782,27 @@ textarea {
   margin: 0 0 14px;
 }
 
+.proposal-project-picker {
+  display: grid;
+  gap: 7px;
+  min-width: min(280px, 100%);
+  color: #5d6f78;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.proposal-project-picker select {
+  min-height: 42px;
+  border: 1px solid rgba(19, 60, 79, 0.16);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #133c4f;
+  background: #ffffff;
+  font: inherit;
+  text-transform: none;
+}
+
 .proposal-actions {
   display: flex;
   flex-wrap: wrap;

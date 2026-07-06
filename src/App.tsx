@@ -31,7 +31,7 @@ import {
 } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import './App.css'
 import heroImage from './assets/hero.png'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
@@ -819,6 +819,7 @@ function App() {
     ],
     [projectStatuses],
   )
+  const persistedProjectIds = useMemo(() => new Set(projectStatuses.map((project) => project.id)), [projectStatuses])
   const activeProjects = operatingProjects.filter((project) => project.status === 'active').length
   const blockedProjects = operatingProjects.filter((project) => project.status === 'blocked').length
   const waitingProjects = operatingProjects.filter((project) => project.status === 'waiting').length
@@ -831,6 +832,10 @@ function App() {
     .filter((project) => project.status === 'waiting' || project.status === 'blocked' || Boolean(project.blocker))
     .sort((left, right) => getActionPriority(right).score - getActionPriority(left).score)
   const selectedActionProject = operatingProjects.find((project) => project.id === selectedActionProjectId) || null
+  const proposalTargetProject =
+    selectedActionProject && persistedProjectIds.has(selectedActionProject.id)
+      ? selectedActionProject
+      : projectStatuses[0] || null
   const selectedProjectStats = selectedActionProject ? projectStats[selectedActionProject.project_name] : null
   const selectedWorkspace = selectedActionProject
     ? projectWorkspaces[selectedActionProject.project_name] || defaultWorkspace
@@ -946,8 +951,8 @@ function App() {
         .filter((activity) => activity.campaign_id === selectedCampaign.id)
         .sort((left, right) => right.activity_date.localeCompare(left.activity_date))
     : []
-  const selectedProjectProposals = selectedActionProject
-    ? projectProposals.filter((proposal) => proposal.project_id === selectedActionProject.id)
+  const selectedProjectProposals = proposalTargetProject
+    ? projectProposals.filter((proposal) => proposal.project_id === proposalTargetProject.id)
     : []
   const selectedProposal =
     selectedProjectProposals.find((proposal) => proposal.id === selectedProposalId) || selectedProjectProposals[0] || null
@@ -1558,38 +1563,55 @@ function App() {
 
   const createProposal = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!selectedActionProject || !supabase) {
+    if (!supabase) {
+      setCommandDataStatus('Proposal generator is offline because Supabase is not configured.')
+      return
+    }
+    if (!proposalTargetProject) {
+      setCommandDataStatus('Create a project workspace first, then generate the proposal from this page.')
       return
     }
 
     const formData = new FormData(event.currentTarget)
-    setCommandDataStatus('Saving proposal draft...')
-    const { error } = await supabase.from('project_proposals').insert({
-      project_id: selectedActionProject.id,
-      proposal_date: String(formData.get('proposalDate')) || new Date().toISOString().slice(0, 10),
-      proposal_time: String(formData.get('proposalTime')) || null,
-      company_name: String(formData.get('proposalCompany')),
-      company_address: String(formData.get('proposalAddress')) || null,
-      directed_to: String(formData.get('proposalDirectedTo')),
-      contact_title: String(formData.get('proposalContactTitle')) || null,
-      contact_email: String(formData.get('proposalContactEmail')) || null,
-      price: String(formData.get('proposalPrice')) || null,
-      scope_summary: String(formData.get('proposalScope')) || null,
-      terms: String(formData.get('proposalTerms')) || null,
-      valid_until: String(formData.get('proposalValidUntil')) || null,
-      status: String(formData.get('proposalStatus')) || 'draft',
-      next_step: String(formData.get('proposalNextStep')) || null,
-      updated_at: new Date().toISOString(),
-    })
+    setCommandDataStatus(`Generating proposal for ${proposalTargetProject.project_name}...`)
+    const proposalDate = String(formData.get('proposalDate') || new Date().toISOString().slice(0, 10))
+    const { data, error } = await supabase
+      .from('project_proposals')
+      .insert({
+        project_id: proposalTargetProject.id,
+        proposal_date: proposalDate,
+        proposal_time: String(formData.get('proposalTime')) || null,
+        company_name: String(formData.get('proposalCompany')),
+        company_address: String(formData.get('proposalAddress')) || null,
+        directed_to: String(formData.get('proposalDirectedTo')),
+        contact_title: String(formData.get('proposalContactTitle')) || null,
+        contact_email: String(formData.get('proposalContactEmail')) || null,
+        price: String(formData.get('proposalPrice')) || null,
+        scope_summary: String(formData.get('proposalScope')) || null,
+        terms: String(formData.get('proposalTerms')) || null,
+        valid_until: String(formData.get('proposalValidUntil')) || null,
+        status: String(formData.get('proposalStatus')) || 'draft',
+        next_step: String(formData.get('proposalNextStep')) || null,
+        updated_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
 
     if (error) {
-      setCommandDataStatus('Proposal could not be saved. Apply the latest proposal builder schema.')
+      setCommandDataStatus(`Proposal could not be generated: ${error.message}`)
       return
     }
 
     event.currentTarget.reset()
-    setCommandDataStatus('Proposal draft saved.')
+    setSelectedActionProjectId(proposalTargetProject.id)
+    setSelectedProposalId(data.id)
+    setCommandDataStatus('Proposal generated. Branded preview, download, and copy link are ready.')
     await loadCommandRecords()
+  }
+
+  const changeProposalProject = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedActionProjectId(event.currentTarget.value)
+    setSelectedProposalId(null)
   }
 
   const printSelectedProposal = () => {
@@ -3246,6 +3268,24 @@ function App() {
                             <h3>Proposal drafts</h3>
                             <p>Create clean proposal records when a CRM lead reaches proposal stage.</p>
                           </div>
+                          <label className="proposal-project-picker">
+                            Project
+                            <select
+                              disabled={projectStatuses.length === 0}
+                              onChange={changeProposalProject}
+                              value={proposalTargetProject?.id || ''}
+                            >
+                              {projectStatuses.length === 0 ? (
+                                <option value="">Create a project first</option>
+                              ) : (
+                                projectStatuses.map((project) => (
+                                  <option key={project.id} value={project.id}>
+                                    {project.project_name}
+                                  </option>
+                                ))
+                              )}
+                            </select>
+                          </label>
                         </div>
                         {selectedProjectProposals.length > 0 ? (
                           <div className="proposal-table-wrap">
@@ -3457,7 +3497,9 @@ function App() {
                             Next step
                             <textarea name="proposalNextStep" placeholder="Send proposal, schedule review call, collect missing site info, or revise price." />
                           </label>
-                          <button type="submit">Save Proposal Draft</button>
+                          <button type="submit" disabled={!proposalTargetProject}>
+                            Generate Proposal <FileText size={18} />
+                          </button>
                         </form>
                       </div>
                     )}
