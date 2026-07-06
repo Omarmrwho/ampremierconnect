@@ -35,7 +35,8 @@ import type { Session } from '@supabase/supabase-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import './App.css'
-import heroImage from './assets/hero.png'
+import brandLogo from './assets/am-premier-logo.png'
+import proposalMedia from './assets/am-premier-media.jpg'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const roles = ['Client', 'Vendor', 'Internal'] as const
@@ -1798,7 +1799,168 @@ function App() {
       return
     }
 
-    window.print()
+    const proposalDocument = document.querySelector('.proposal-document')
+    if (!proposalDocument) {
+      setCommandDataStatus('Proposal preview is not ready yet.')
+      return
+    }
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer')
+    if (!printWindow) {
+      setCommandDataStatus('Popup blocked. Allow popups for this site, then download the proposal again.')
+      return
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>AM Premier Proposal - ${selectedProposal.company_name}</title>
+          <style>
+            @page { size: letter; margin: 0.45in; }
+            * { box-sizing: border-box; }
+            body {
+              margin: 0;
+              color: #10232b;
+              background: #ffffff;
+              font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .proposal-document {
+              display: grid;
+              gap: 16px;
+              width: 100%;
+              padding: 0;
+              border: 0;
+              border-radius: 0;
+              box-shadow: none;
+            }
+            .proposal-document-head,
+            .proposal-doc-meta,
+            .proposal-doc-footer {
+              display: grid;
+              gap: 12px;
+            }
+            .proposal-document-head {
+              grid-template-columns: 1fr auto;
+              align-items: start;
+              padding-bottom: 14px;
+              border-bottom: 4px solid #133c4f;
+            }
+            .proposal-doc-brand {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+            }
+            .proposal-brand-logo {
+              width: 150px;
+              max-height: 48px;
+              object-fit: contain;
+            }
+            .proposal-status-box {
+              display: grid;
+              gap: 4px;
+              min-width: 128px;
+              padding: 10px 12px;
+              border-radius: 8px;
+              color: #ffffff;
+              background: #133c4f;
+              text-align: right;
+            }
+            .proposal-cover-media {
+              display: grid;
+              grid-template-columns: 0.85fr 1.15fr;
+              overflow: hidden;
+              min-height: 190px;
+              border: 1px solid rgba(19, 60, 79, 0.14);
+              border-radius: 8px;
+              background: #10232b;
+              page-break-inside: avoid;
+            }
+            .proposal-cover-media img {
+              width: 100%;
+              height: 100%;
+              min-height: 190px;
+              object-fit: cover;
+              background: #ffffff;
+            }
+            .proposal-cover-media div {
+              display: grid;
+              align-content: center;
+              gap: 8px;
+              padding: 22px;
+            }
+            .proposal-cover-media span,
+            .proposal-section-label {
+              color: #b9d8d6;
+              font-size: 11px;
+              font-weight: 850;
+              text-transform: uppercase;
+            }
+            .proposal-cover-media strong {
+              color: #ffffff;
+              font-size: 25px;
+              line-height: 1.08;
+            }
+            .proposal-cover-media small {
+              color: #d6e4e0;
+              line-height: 1.45;
+            }
+            .proposal-doc-title h2 {
+              margin: 2px 0 4px;
+              font-size: 34px;
+              line-height: 1.04;
+            }
+            .proposal-doc-title p,
+            .proposal-document section p {
+              margin: 0;
+              color: #53666f;
+              line-height: 1.45;
+            }
+            .proposal-doc-meta {
+              grid-template-columns: repeat(3, 1fr);
+            }
+            .proposal-doc-meta div,
+            .proposal-doc-footer div {
+              padding: 10px;
+              border: 1px solid rgba(19, 60, 79, 0.12);
+              border-radius: 8px;
+              background: #f7faf8;
+            }
+            .proposal-doc-meta span,
+            .proposal-doc-meta small,
+            .proposal-doc-footer span,
+            .proposal-doc-footer small {
+              display: block;
+              color: #65737a;
+              font-size: 11px;
+            }
+            .proposal-doc-meta strong,
+            .proposal-doc-footer strong {
+              display: block;
+              margin-top: 4px;
+              color: #10232b;
+              overflow-wrap: anywhere;
+            }
+            section { page-break-inside: avoid; }
+            .proposal-doc-footer {
+              grid-template-columns: 1fr 1.4fr;
+              margin-top: 4px;
+            }
+            @media print {
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>${proposalDocument.outerHTML}</body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => {
+      printWindow.print()
+    }, 250)
   }
 
   const copySelectedProposalLink = async () => {
@@ -3756,25 +3918,25 @@ function App() {
                             <article className="proposal-document" aria-label="Proposal PDF preview">
                               <header className="proposal-document-head">
                                 <div className="proposal-doc-brand">
-                                  <span className="proposal-logo-mark">AM</span>
+                                  <img className="proposal-brand-logo" src={brandLogo} alt="AM Premier Solutions" />
                                   <div>
                                     <strong>AM Premier Solutions</strong>
-                                    <small>Power, infrastructure, and execution support</small>
+                                    <small>Power, EV infrastructure, and execution support</small>
                                   </div>
                                 </div>
-                                <div>
+                                <div className="proposal-status-box">
                                   <span>Proposal Status</span>
                                   <strong>{selectedProposal.status}</strong>
                                 </div>
                               </header>
                               <div className="proposal-cover-media">
-                                <img src={heroImage} alt="" />
+                                <img src={proposalMedia} alt="AM Premier charging infrastructure" />
                                 <div>
                                   <span>
                                     <Image size={15} /> AM Premier media package
                                   </span>
-                                  <strong>Branded proposal output</strong>
-                                  <small>Prepared as a controlled client-facing package with AM Premier identity, scope, terms, and next action.</small>
+                                  <strong>Client-ready infrastructure proposal</strong>
+                                  <small>Prepared with AM Premier branding, relevant project media, defined scope, commercial terms, and next action.</small>
                                 </div>
                               </div>
                               <div className="proposal-doc-title">
