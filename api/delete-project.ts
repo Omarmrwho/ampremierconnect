@@ -80,7 +80,7 @@ export default async function handler(request: any, response: any) {
 
   const projectIds = (projects || []).map((project) => project.id)
   if (projectIds.length === 0) {
-    json(response, 200, { ok: true, deleted: 0 })
+    json(response, 404, { error: 'No matching workspace records were found to delete.', deleted: 0, deletedIds: [] })
     return
   }
 
@@ -102,15 +102,22 @@ export default async function handler(request: any, response: any) {
     }
   }
 
-  const { count, error } = await adminClient
+  const { data: deletedProjects, error } = await adminClient
     .from('project_session_status')
-    .delete({ count: 'exact' })
+    .delete()
     .in('id', projectIds)
+    .select('id')
 
   if (error) {
     json(response, 500, { error: error.message })
     return
   }
 
-  json(response, 200, { ok: true, deleted: count ?? 0 })
+  const deletedIds = (deletedProjects || []).map((project) => project.id)
+  if (deletedIds.length === 0) {
+    json(response, 500, { error: 'Delete request completed but Supabase returned zero deleted rows.', deleted: 0, deletedIds: [] })
+    return
+  }
+
+  json(response, 200, { ok: true, deleted: deletedIds.length, deletedIds })
 }

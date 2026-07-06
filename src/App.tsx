@@ -1385,6 +1385,8 @@ function App() {
         const payload = await response.json().catch(() => null)
         if (!response.ok) {
           deleteError = String(payload?.error || 'Workspace delete API failed.')
+        } else if (!Array.isArray(payload?.deletedIds) || !payload.deletedIds.includes(project.id)) {
+          deleteError = 'Workspace delete API did not confirm this row was deleted.'
         }
       } catch (error) {
         deleteError = error instanceof Error ? error.message : 'Workspace delete API failed.'
@@ -1448,7 +1450,12 @@ function App() {
           setProjectStatusMessage(`Workspace delete failed: ${String(payload?.error || 'Workspace delete API failed.')}`)
           return
         }
-        deletedCount = Number(payload?.deleted || matchingProjects.length)
+        deletedProjectIds = Array.isArray(payload?.deletedIds) ? payload.deletedIds : []
+        deletedCount = deletedProjectIds.length
+        if (deletedCount === 0) {
+          setProjectStatusMessage('Workspace delete failed: delete API returned zero deleted rows.')
+          return
+        }
       } catch (error) {
         setProjectStatusMessage(`Workspace delete failed: ${error instanceof Error ? error.message : 'Workspace delete API failed.'}`)
         return
@@ -3136,61 +3143,63 @@ function App() {
               </div>
             </div>
 
-            <section className="ops-create-panel" aria-label="Create project workspace">
-              <div className="panel-heading">
-                <BriefcaseBusiness size={20} />
-                <div>
-                  <h2>Create Project Workspace</h2>
-                  <p>Add a real tracked project with owner, status, last update, and next action.</p>
+            {isProposalsRoute && (
+              <section className="ops-create-panel" aria-label="Create project workspace">
+                <div className="panel-heading">
+                  <BriefcaseBusiness size={20} />
+                  <div>
+                    <h2>Create Project Workspace</h2>
+                    <p>Add a real tracked project with owner, status, last update, and next action.</p>
+                  </div>
                 </div>
-              </div>
-              <form className="ops-form-grid" onSubmit={createProject}>
-                <label>
-                  Project name
-                  <input name="projectName" placeholder="AM Premier Station" required type="text" />
-                </label>
-                <label>
-                  Client / business
-                  <input name="clientName" placeholder="AM Premier Solutions" type="text" />
-                </label>
-                <label>
-                  Type / source
-                  <input name="projectType" placeholder="Construction / CRM / campaign" type="text" />
-                </label>
-                <label>
-                  Owner
-                  <input name="owner" placeholder="Elara / Omar / Agent" type="text" />
-                </label>
-                <label>
-                  Status
-                  <select defaultValue="active" name="status">
-                    <option value="active">Active</option>
-                    <option value="waiting">Waiting</option>
-                    <option value="blocked">Blocked</option>
-                    <option value="complete">Complete</option>
-                  </select>
-                </label>
-                <label>
-                  Health
-                  <select defaultValue="green" name="health">
-                    <option value="green">Green</option>
-                    <option value="yellow">Yellow</option>
-                    <option value="red">Red</option>
-                  </select>
-                </label>
-                <label className="wide">
-                  Last update
-                  <textarea name="lastUpdate" placeholder="What changed or what exists right now?" />
-                </label>
-                <label className="wide">
-                  Next action
-                  <textarea name="nextAction" placeholder="The next specific action, owner, and timing." />
-                </label>
-                <button type="submit">
-                  Create Workspace <BadgeCheck size={18} />
-                </button>
-              </form>
-            </section>
+                <form className="ops-form-grid" onSubmit={createProject}>
+                  <label>
+                    Project name
+                    <input name="projectName" placeholder="AM Premier Station" required type="text" />
+                  </label>
+                  <label>
+                    Client / business
+                    <input name="clientName" placeholder="AM Premier Solutions" type="text" />
+                  </label>
+                  <label>
+                    Type / source
+                    <input name="projectType" placeholder="Construction / CRM / campaign" type="text" />
+                  </label>
+                  <label>
+                    Owner
+                    <input name="owner" placeholder="Elara / Omar / Agent" type="text" />
+                  </label>
+                  <label>
+                    Status
+                    <select defaultValue="active" name="status">
+                      <option value="active">Active</option>
+                      <option value="waiting">Waiting</option>
+                      <option value="blocked">Blocked</option>
+                      <option value="complete">Complete</option>
+                    </select>
+                  </label>
+                  <label>
+                    Health
+                    <select defaultValue="green" name="health">
+                      <option value="green">Green</option>
+                      <option value="yellow">Yellow</option>
+                      <option value="red">Red</option>
+                    </select>
+                  </label>
+                  <label className="wide">
+                    Last update
+                    <textarea name="lastUpdate" placeholder="What changed or what exists right now?" />
+                  </label>
+                  <label className="wide">
+                    Next action
+                    <textarea name="nextAction" placeholder="The next specific action, owner, and timing." />
+                  </label>
+                  <button type="submit">
+                    Create Workspace <BadgeCheck size={18} />
+                  </button>
+                </form>
+              </section>
+            )}
 
             <div className="command-board">
               <section className="movement-panel" aria-label="Project movement board">
@@ -4614,7 +4623,7 @@ function App() {
               </div>
             )}
 
-            <div className="project-grid">
+            {isProposalsRoute && <div className="project-grid">
               {filteredProjects.length === 0 ? (
                 <article className="empty-project-state">
                   <Radio size={22} />
@@ -4660,6 +4669,7 @@ function App() {
                             </button>
                             {projectStatuses.filter((currentProject) => currentProject.project_name === project.project_name).length > 1 && (
                               <button
+                                className="project-delete-duplicates-button"
                                 type="button"
                                 onClick={(event) => {
                                   event.stopPropagation()
@@ -4724,7 +4734,7 @@ function App() {
                   )
                 })
               )}
-            </div>
+            </div>}
           </section>
         ) : (
           <section className="locked-command-state">
