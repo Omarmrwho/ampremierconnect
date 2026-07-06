@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "sync:email-replies": "node scripts/sync-email-replies-to-supabase.cjs --days=14 --top=100 --create-unmatched --apply",
     "preview": "vite preview"
   },
   "dependencies": {
