@@ -751,6 +751,12 @@ const getCrmField = (details: string | null, label: string) => {
   return match?.[1]?.trim() || ''
 }
 
+const responseSignalPattern =
+  /\b(reply|replied|response|responded|interested|not a fit|not-fit|no thanks|opt[- ]?out|unsubscribe|bounce|bounced|meeting|call booked|scheduled|warm|positive|negative)\b/i
+
+const hasResponseSignal = (...values: Array<string | null | undefined>) =>
+  values.some((value) => responseSignalPattern.test(value || ''))
+
 const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
   const details = record.next_step || ''
   const email = record.email || getCrmField(details, 'Email')
@@ -783,7 +789,7 @@ const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
     campaign,
     sent,
     response,
-    hasResponse: Boolean(response || record.stage.toLowerCase().includes('response') || record.stage.toLowerCase().includes('replied')),
+    hasResponse: Boolean(response || hasResponseSignal(record.stage, record.next_step)),
     followUp: manualNextStep || extraRoutes || 'Review reply status and schedule next touch.',
   }
 }
@@ -992,6 +998,26 @@ function App() {
         .filter((activity) => activity.campaign_id === selectedCampaign.id)
         .sort((left, right) => right.activity_date.localeCompare(left.activity_date))
     : []
+  const campaignActivityRows = projectCampaignActivities
+    .filter((activity) => hasResponseSignal(activity.activity_type, activity.outcome, activity.next_step))
+    .filter((activity) => !selectedActionProject || activity.project_id === selectedActionProject.id)
+    .map((activity) => {
+      const campaign = projectCampaigns.find((currentCampaign) => currentCampaign.id === activity.campaign_id)
+
+      return {
+        id: `activity-${activity.id}`,
+        source: hasResponseSignal(activity.activity_type) ? 'Campaign reply activity' : 'Campaign activity outcome',
+        projectId: activity.project_id,
+        campaignId: activity.campaign_id,
+        campaignName: campaign?.campaign_name || 'Deleted or unknown campaign',
+        companyName: activity.owner || 'Contact not tagged',
+        contactName: activity.owner || '',
+        contactEmail: 'No email captured in activity',
+        replyDate: activity.activity_date,
+        outcome: activity.outcome || activity.activity_type || 'Activity logged without outcome.',
+        nextStep: activity.next_step || 'Review and assign follow-up.',
+      }
+    })
   const campaignReplyRows = [
     ...responseCrmRecords
       .filter((record) => !selectedActionProject || record.project_id === selectedActionProject.id)
@@ -1015,30 +1041,11 @@ function App() {
           contactName: record.contact_name || '',
           contactEmail: record.email || 'No email captured',
           replyDate: record.last_contacted_at?.slice(0, 10) || 'Date not logged',
-          outcome: record.response || record.stage,
+          outcome: record.response || record.stage || 'Response logged',
           nextStep: record.followUp || record.next_step || 'Review and assign follow-up.',
         }
       }),
-    ...projectCampaignActivities
-      .filter((activity) => activity.activity_type.toLowerCase().includes('reply'))
-      .filter((activity) => !selectedActionProject || activity.project_id === selectedActionProject.id)
-      .map((activity) => {
-        const campaign = projectCampaigns.find((currentCampaign) => currentCampaign.id === activity.campaign_id)
-
-        return {
-          id: `activity-${activity.id}`,
-          source: 'Campaign activity',
-          projectId: activity.project_id,
-          campaignId: activity.campaign_id,
-          campaignName: campaign?.campaign_name || 'Deleted or unknown campaign',
-          companyName: activity.owner || 'Contact not tagged',
-          contactName: activity.owner || '',
-          contactEmail: 'No email captured in activity',
-          replyDate: activity.activity_date,
-          outcome: activity.outcome || 'Reply logged without outcome.',
-          nextStep: activity.next_step || 'Review and assign follow-up.',
-        }
-      }),
+    ...campaignActivityRows,
   ].sort((left, right) => right.replyDate.localeCompare(left.replyDate))
   const selectedProjectProposals = proposalTargetProject
     ? projectProposals.filter((proposal) => proposal.project_id === proposalTargetProject.id)
