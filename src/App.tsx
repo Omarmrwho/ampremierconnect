@@ -851,6 +851,7 @@ function App() {
   const isInternal = profile?.role === 'internal'
   const isCommandRoute = routePath === '/command'
   const isCrmRoute = routePath === '/crm'
+  const isCampaignsRoute = routePath === '/campaigns'
   const isProposalsRoute = routePath === '/proposals'
   const isChatRoute = routePath === '/chat'
   const operatingProjects = useMemo(
@@ -937,6 +938,22 @@ function App() {
   const selectedProjectCampaigns = selectedActionProject
     ? projectCampaigns.filter((campaign) => campaign.project_id === selectedActionProject.id)
     : []
+  const visibleReplyProjects = selectedActionProject && !isCampaignsRoute ? [selectedActionProject] : operatingProjects
+  const visibleReplyProjectIds = new Set(visibleReplyProjects.map((project) => project.id))
+  const getProjectName = (projectId: string) =>
+    operatingProjects.find((project) => project.id === projectId)?.project_name || 'Deleted or unknown workspace'
+  const getCampaignForRecord = (record: ParsedCrmRecord) => {
+    const recordCampaign = record.campaign.trim().toLowerCase()
+    const sameProjectCampaigns = projectCampaigns.filter((campaign) => campaign.project_id === record.project_id)
+
+    return sameProjectCampaigns.find(
+      (campaign) =>
+        recordCampaign &&
+        (campaign.campaign_name.toLowerCase() === recordCampaign ||
+          campaign.campaign_name.toLowerCase().includes(recordCampaign) ||
+          recordCampaign.includes(campaign.campaign_name.toLowerCase())),
+    )
+  }
   const getCampaignActivitySummary = (campaignId: string) => {
     const activities = projectCampaignActivities
       .filter((activity) => activity.campaign_id === campaignId)
@@ -1000,14 +1017,15 @@ function App() {
     : []
   const campaignActivityRows = projectCampaignActivities
     .filter((activity) => hasResponseSignal(activity.activity_type, activity.outcome, activity.next_step))
-    .filter((activity) => !selectedActionProject || activity.project_id === selectedActionProject.id)
+    .filter((activity) => visibleReplyProjectIds.has(activity.project_id))
     .map((activity) => {
       const campaign = projectCampaigns.find((currentCampaign) => currentCampaign.id === activity.campaign_id)
 
       return {
         id: `activity-${activity.id}`,
-        source: hasResponseSignal(activity.activity_type) ? 'Campaign reply activity' : 'Campaign activity outcome',
+        source: hasResponseSignal(activity.activity_type) ? 'Campaign activity' : 'Campaign activity outcome',
         projectId: activity.project_id,
+        projectName: getProjectName(activity.project_id),
         campaignId: activity.campaign_id,
         campaignName: campaign?.campaign_name || 'Deleted or unknown campaign',
         companyName: activity.owner || 'Contact not tagged',
@@ -1020,21 +1038,15 @@ function App() {
     })
   const campaignReplyRows = [
     ...responseCrmRecords
-      .filter((record) => !selectedActionProject || record.project_id === selectedActionProject.id)
+      .filter((record) => visibleReplyProjectIds.has(record.project_id))
       .map((record) => {
-        const recordCampaign = record.campaign.trim().toLowerCase()
-        const matchedCampaign = selectedProjectCampaigns.find(
-          (campaign) =>
-            recordCampaign &&
-            (campaign.campaign_name.toLowerCase() === recordCampaign ||
-              campaign.campaign_name.toLowerCase().includes(recordCampaign) ||
-              recordCampaign.includes(campaign.campaign_name.toLowerCase())),
-        )
+        const matchedCampaign = getCampaignForRecord(record)
 
         return {
           id: `crm-${record.id}`,
           source: 'CRM reply',
           projectId: record.project_id,
+          projectName: getProjectName(record.project_id),
           campaignId: matchedCampaign?.id || '',
           campaignName: record.campaign || matchedCampaign?.campaign_name || 'Campaign not tagged',
           companyName: record.company_name,
@@ -1177,15 +1189,18 @@ function App() {
     if (isCrmRoute) {
       setWorkspaceTab('crm')
     }
+    if (isCampaignsRoute) {
+      setWorkspaceTab('campaigns')
+    }
     if (isProposalsRoute) {
       setWorkspaceTab('proposals')
     }
-  }, [isCrmRoute, isProposalsRoute])
+  }, [isCrmRoute, isCampaignsRoute, isProposalsRoute])
 
   useEffect(() => {
     if (
       !isInternal ||
-      (!isCommandRoute && !isCrmRoute && !isProposalsRoute) ||
+      (!isCommandRoute && !isCrmRoute && !isCampaignsRoute && !isProposalsRoute) ||
       selectedActionProjectId ||
       operatingProjects.length === 0
     ) {
@@ -1193,10 +1208,22 @@ function App() {
     }
 
     setSelectedActionProjectId(operatingProjects[0].id)
-  }, [isInternal, isCommandRoute, isCrmRoute, isProposalsRoute, selectedActionProjectId, operatingProjects])
+  }, [
+    isInternal,
+    isCommandRoute,
+    isCrmRoute,
+    isCampaignsRoute,
+    isProposalsRoute,
+    selectedActionProjectId,
+    operatingProjects,
+  ])
 
   useEffect(() => {
-    if (!isInternal || (!isCommandRoute && !isCrmRoute && !isProposalsRoute) || !selectedActionProjectId) {
+    if (
+      !isInternal ||
+      (!isCommandRoute && !isCrmRoute && !isCampaignsRoute && !isProposalsRoute) ||
+      !selectedActionProjectId
+    ) {
       return
     }
 
@@ -1209,6 +1236,7 @@ function App() {
     isInternal,
     isCommandRoute,
     isCrmRoute,
+    isCampaignsRoute,
     isProposalsRoute,
     selectedActionProjectId,
     operatingProjects,
@@ -2489,12 +2517,15 @@ function App() {
             <button type="button" className="nav-link-button" onClick={() => navigateTo('/command')}>
               Command
             </button>
-            <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
-              CRM
-            </button>
-            <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
-              Proposals
-            </button>
+	            <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
+	              CRM
+	            </button>
+	            <button type="button" className="nav-link-button" onClick={() => navigateTo('/campaigns')}>
+	              Campaigns
+	            </button>
+	            <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
+	              Proposals
+	            </button>
             {session && (
               <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
                 <LogOut size={18} />
@@ -3674,9 +3705,12 @@ function App() {
                         <section className="campaign-reply-tracker" aria-label="Campaign email replies">
                           <div className="campaign-reply-head">
                             <div>
-                              <span className="decision-label">Reply Tracker</span>
-                              <h3>{campaignReplyRows.length} campaign replies</h3>
-                              <p>See which emails replied, which campaign they came from, what happened, and the next follow-up.</p>
+	                              <span className="decision-label">Reply Tracker</span>
+	                              <h3>{campaignReplyRows.length} campaign replies</h3>
+	                              <p>
+	                                See which emails replied, which workspace and campaign they came from, what happened,
+	                                and the next follow-up.
+	                              </p>
                             </div>
                             <div className="campaign-reply-stats" aria-label="Reply counts">
                               <span>
@@ -3685,18 +3719,23 @@ function App() {
                               </span>
                               <span>
                                 <strong>{campaignReplyRows.filter((reply) => reply.source === 'Campaign activity').length}</strong>
-                                logged activities
-                              </span>
-                            </div>
-                          </div>
+	                                logged activities
+	                              </span>
+	                              <span>
+	                                <strong>{visibleReplyProjects.length}</strong>
+	                                workspaces
+	                              </span>
+	                            </div>
+	                          </div>
                           {campaignReplyRows.length > 0 ? (
                             <div className="campaign-reply-table-wrap">
                               <table className="campaign-reply-table">
                                 <thead>
                                   <tr>
-                                    <th>Email / Contact</th>
-                                    <th>Campaign</th>
-                                    <th>Reply</th>
+	                                    <th>Email / Contact</th>
+	                                    <th>Workspace</th>
+	                                    <th>Campaign</th>
+	                                    <th>Reply</th>
                                     <th>Next Step</th>
                                     <th>Date</th>
                                   </tr>
@@ -3714,9 +3753,13 @@ function App() {
                                       <td>
                                         <strong>{reply.contactEmail}</strong>
                                         <small>{reply.companyName || reply.contactName || 'Contact not tagged'}</small>
-                                      </td>
-                                      <td>
-                                        <strong>{reply.campaignName}</strong>
+	                                      </td>
+	                                      <td>
+	                                        <strong>{reply.projectName}</strong>
+	                                        <small>{reply.projectId}</small>
+	                                      </td>
+	                                      <td>
+	                                        <strong>{reply.campaignName}</strong>
                                         <small>{reply.source}</small>
                                       </td>
                                       <td>{reply.outcome}</td>
@@ -3728,9 +3771,10 @@ function App() {
                               </table>
                             </div>
                           ) : (
-                            <div className="empty-inline-note">
-                              No replies are tagged to campaigns yet. Paste replies into CRM records with a Campaign value, or log a Reply in a campaign activity.
-                            </div>
+	                            <div className="empty-inline-note">
+	                              No replies are visible yet. Check that the CRM record has a response-like stage or
+	                              Reply/Response text, or log the reply as a campaign activity.
+	                            </div>
                           )}
                         </section>
                         {selectedProjectCampaigns.length > 0 ? (
