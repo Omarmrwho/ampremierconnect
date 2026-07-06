@@ -726,7 +726,7 @@ textarea {
 
 .crm-table {
   width: 100%;
-  min-width: 900px;
+  min-width: 1040px;
   border-collapse: collapse;
 }
 
@@ -1108,6 +1108,45 @@ textarea {
   font-size: 12px;
   font-weight: 850;
   text-transform: uppercase;
+}
+
+.response-ribbon {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 22px;
+  margin: 6px 0 0;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: #0f5132;
+  background: #d9f4df;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.response-ribbon.large {
+  margin: 8px 0 0;
+}
+
+.inline-row-actions {
+  display: inline-flex;
+  gap: 7px;
+}
+
+.inline-row-actions button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  color: #133c4f;
+  background: #e7efe9;
+}
+
+.inline-row-actions button:last-child {
+  color: #8a2d1f;
+  background: #fbe7e2;
 }
 
 .crm-detail-panel {
@@ -1771,6 +1810,72 @@ textarea {
   background: #eef3f1;
   font-size: 12px;
   font-weight: 850;
+}
+
+.crm-response-form,
+.crm-edit-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(19, 60, 79, 0.1);
+}
+
+.crm-edit-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.crm-response-form label,
+.crm-edit-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #65737a;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.crm-response-form input,
+.crm-response-form textarea,
+.crm-edit-form input,
+.crm-edit-form textarea {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(19, 60, 79, 0.14);
+  border-radius: 8px;
+  color: #172126;
+  background: #ffffff;
+  font: inherit;
+  text-transform: none;
+}
+
+.crm-response-form textarea,
+.crm-edit-form textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.crm-response-form button,
+.crm-edit-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #133c4f;
+  font-weight: 850;
+}
+
+.crm-edit-form .wide,
+.crm-response-form label:first-child,
+.crm-response-form button,
+.crm-edit-form button {
+  grid-column: 1 / -1;
 }
 
 .workspace-hero,

@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Clock3,
   Download,
+  Edit3,
   ExternalLink,
   Filter,
   FileText,
@@ -25,6 +26,7 @@ import {
   Send,
   ShieldCheck,
   Target,
+  Trash2,
   UserRound,
   UsersRound,
   Zap,
@@ -115,7 +117,7 @@ const readinessItems = [
 ]
 
 const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as const
-const crmGapFilters = ['all', 'missing-phone', 'missing-source', 'missing-fit'] as const
+const crmGapFilters = ['all', 'has-response', 'missing-phone', 'missing-source', 'missing-fit'] as const
 const crmBulkStages = ['follow-up', 'qualified', 'proposal', 'won', 'dead'] as const
 const campaignActivityFilters = ['all', 'has-activity', 'no-activity'] as const
 
@@ -267,6 +269,8 @@ type ParsedCrmRecord = ProjectCrmRecord & {
   whyFit: string
   campaign: string
   sent: string
+  response: string
+  hasResponse: boolean
   followUp: string
 }
 
@@ -736,6 +740,7 @@ const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
   const source = record.source_url || getCrmField(details, 'Source')
   const whyFit = record.fit_reason || getCrmField(details, 'Why fit')
   const campaign = record.campaign_name || getCrmField(details, 'Campaign')
+  const response = getCrmField(details, 'Response') || getCrmField(details, 'Reply')
   const sent = record.last_contacted_at
     ? `${record.last_contacted_at.slice(0, 10)}${record.last_contact_subject ? ` | ${record.last_contact_subject}` : ''}`
     : getCrmField(details, 'Sent')
@@ -756,6 +761,8 @@ const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
     whyFit,
     campaign,
     sent,
+    response,
+    hasResponse: Boolean(response || record.stage.toLowerCase().includes('response') || record.stage.toLowerCase().includes('replied')),
     followUp: manualNextStep || extraRoutes || 'Review reply status and schedule next touch.',
   }
 }
@@ -874,6 +881,7 @@ function App() {
     const matchesCampaign = crmCampaignFilter === 'all' || record.campaign === crmCampaignFilter
     const matchesGap =
       crmGapFilter === 'all' ||
+      (crmGapFilter === 'has-response' && record.hasResponse) ||
       (crmGapFilter === 'missing-phone' && !record.phone) ||
       (crmGapFilter === 'missing-source' && !record.source && !record.website) ||
       (crmGapFilter === 'missing-fit' && !record.whyFit)
@@ -887,6 +895,7 @@ function App() {
     null
   const selectedProjectStageCount = new Set(parsedSelectedProjectCrmRecords.map((record) => record.stage)).size
   const selectedProjectContactCount = parsedSelectedProjectCrmRecords.filter((record) => record.email || record.phone).length
+  const selectedProjectResponseCount = parsedSelectedProjectCrmRecords.filter((record) => record.hasResponse).length
   const selectedProjectCampaigns = selectedActionProject
     ? projectCampaigns.filter((campaign) => campaign.project_id === selectedActionProject.id)
     : []
@@ -1394,6 +1403,116 @@ function App() {
     await loadCommandRecords()
   }
 
+  const updateCrmRecord = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedCrmRecord || !supabase) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    setCommandDataStatus(`Updating ${selectedCrmRecord.company_name}...`)
+    const { error } = await supabase
+      .from('project_crm_records')
+      .update({
+        company_name: String(formData.get('companyName')),
+        contact_name: String(formData.get('contactName')) || null,
+        contact_title: String(formData.get('contactTitle')) || null,
+        email: String(formData.get('crmEmail')) || null,
+        phone: String(formData.get('crmPhone')) || null,
+        location: String(formData.get('crmLocation')) || null,
+        segment: String(formData.get('crmSegment')) || null,
+        website: String(formData.get('crmWebsite')) || null,
+        source_url: String(formData.get('crmSource')) || null,
+        campaign_name: String(formData.get('crmCampaign')) || null,
+        channel: String(formData.get('crmChannel')) || null,
+        fit_reason: String(formData.get('crmFitReason')) || null,
+        stage: String(formData.get('crmStage')) || 'qualification',
+        owner: String(formData.get('crmOwner')) || null,
+        next_step: String(formData.get('crmNextStep')) || null,
+        value_estimate: String(formData.get('crmValue')) || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedCrmRecord.id)
+
+    if (error) {
+      setCommandDataStatus(`CRM record update failed: ${error.message}`)
+      return
+    }
+
+    setCommandDataStatus('CRM record updated.')
+    await loadCommandRecords()
+  }
+
+  const logCrmResponse = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedCrmRecord || !supabase) {
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    const responseText = String(formData.get('crmResponse')).trim()
+    if (!responseText) {
+      setCommandDataStatus('Add the reply text before saving a CRM response.')
+      return
+    }
+
+    const responseDate = new Date().toISOString().slice(0, 10)
+    const existingNotes = selectedCrmRecord.next_step || ''
+    const nextStep = String(formData.get('crmResponseNextStep')) || selectedCrmRecord.followUp
+    const updatedNotes = [
+      existingNotes,
+      `Response: ${responseText}`,
+      nextStep ? `Response next step: ${nextStep}` : '',
+      `Response logged: ${responseDate}`,
+    ]
+      .filter(Boolean)
+      .join(' | ')
+
+    setCommandDataStatus(`Logging response from ${selectedCrmRecord.company_name}...`)
+    const { error } = await supabase
+      .from('project_crm_records')
+      .update({
+        stage: 'responded',
+        next_step: updatedNotes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedCrmRecord.id)
+
+    if (error) {
+      setCommandDataStatus(`CRM response could not be saved: ${error.message}`)
+      return
+    }
+
+    event.currentTarget.reset()
+    setCrmGapFilter('has-response')
+    setCommandDataStatus('CRM response saved and marked with a green ribbon.')
+    await loadCommandRecords()
+  }
+
+  const deleteCrmRecord = async (id: string, companyName: string) => {
+    if (!supabase) {
+      return
+    }
+
+    const confirmed = window.confirm(`Delete ${companyName} from the CRM?`)
+    if (!confirmed) {
+      return
+    }
+
+    setCommandDataStatus(`Deleting ${companyName}...`)
+    const { error } = await supabase.from('project_crm_records').delete().eq('id', id)
+
+    if (error) {
+      setCommandDataStatus(`CRM record delete failed: ${error.message}`)
+      return
+    }
+
+    setSelectedCrmRecordId(null)
+    setSelectedCrmRecordIds((currentIds) => currentIds.filter((currentId) => currentId !== id))
+    setCommandDataStatus('CRM record deleted.')
+    await loadCommandRecords()
+  }
+
   const toggleCrmRecordSelection = (id: string) => {
     setSelectedCrmRecordIds((currentIds) =>
       currentIds.includes(id) ? currentIds.filter((currentId) => currentId !== id) : [...currentIds, id],
@@ -1575,26 +1694,27 @@ function App() {
     const formData = new FormData(event.currentTarget)
     setCommandDataStatus(`Generating proposal for ${proposalTargetProject.project_name}...`)
     const proposalDate = String(formData.get('proposalDate') || new Date().toISOString().slice(0, 10))
+    const proposalPayload = {
+      project_id: proposalTargetProject.id,
+      proposal_date: proposalDate,
+      proposal_time: String(formData.get('proposalTime')) || null,
+      company_name: String(formData.get('proposalCompany')),
+      company_address: String(formData.get('proposalAddress')) || null,
+      directed_to: String(formData.get('proposalDirectedTo')),
+      contact_title: String(formData.get('proposalContactTitle')) || null,
+      contact_email: String(formData.get('proposalContactEmail')) || null,
+      price: String(formData.get('proposalPrice')) || null,
+      scope_summary: String(formData.get('proposalScope')) || null,
+      terms: String(formData.get('proposalTerms')) || null,
+      valid_until: String(formData.get('proposalValidUntil')) || null,
+      status: String(formData.get('proposalStatus')) || 'draft',
+      next_step: String(formData.get('proposalNextStep')) || null,
+      updated_at: new Date().toISOString(),
+    }
     const { data, error } = await supabase
       .from('project_proposals')
-      .insert({
-        project_id: proposalTargetProject.id,
-        proposal_date: proposalDate,
-        proposal_time: String(formData.get('proposalTime')) || null,
-        company_name: String(formData.get('proposalCompany')),
-        company_address: String(formData.get('proposalAddress')) || null,
-        directed_to: String(formData.get('proposalDirectedTo')),
-        contact_title: String(formData.get('proposalContactTitle')) || null,
-        contact_email: String(formData.get('proposalContactEmail')) || null,
-        price: String(formData.get('proposalPrice')) || null,
-        scope_summary: String(formData.get('proposalScope')) || null,
-        terms: String(formData.get('proposalTerms')) || null,
-        valid_until: String(formData.get('proposalValidUntil')) || null,
-        status: String(formData.get('proposalStatus')) || 'draft',
-        next_step: String(formData.get('proposalNextStep')) || null,
-        updated_at: new Date().toISOString(),
-      })
-      .select('id')
+      .insert(proposalPayload)
+      .select('id,project_id,proposal_date,proposal_time,company_name,company_address,directed_to,contact_title,contact_email,price,scope_summary,terms,valid_until,status,next_step')
       .single()
 
     if (error) {
@@ -1605,6 +1725,7 @@ function App() {
     event.currentTarget.reset()
     setSelectedActionProjectId(proposalTargetProject.id)
     setSelectedProposalId(data.id)
+    setProjectProposals((currentProposals) => [data, ...currentProposals.filter((proposal) => proposal.id !== data.id)])
     setCommandDataStatus('Proposal generated. Branded preview, download, and copy link are ready.')
     await loadCommandRecords()
   }
@@ -1959,6 +2080,10 @@ function App() {
                 <strong>{selectedProjectContactCount}</strong>
               </div>
               <div>
+                <span>Responses</span>
+                <strong>{selectedProjectResponseCount}</strong>
+              </div>
+              <div>
                 <span>Stages</span>
                 <strong>{selectedProjectStageCount}</strong>
               </div>
@@ -2073,6 +2198,7 @@ function App() {
                     Data gaps
                     <select value={crmGapFilter} onChange={(event) => setCrmGapFilter(event.target.value as CrmGapFilter)}>
                       <option value="all">All records</option>
+                      <option value="has-response">Responses only</option>
                       <option value="missing-phone">Missing phone</option>
                       <option value="missing-source">Missing source</option>
                       <option value="missing-fit">Missing fit reason</option>
@@ -2188,6 +2314,7 @@ function App() {
                               <th>Stage</th>
                               <th>Location</th>
                               <th>Campaign</th>
+                              <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2208,6 +2335,7 @@ function App() {
                                 </td>
                                 <td>
                                   <strong>{record.company_name}</strong>
+                                  {record.hasResponse && <span className="response-ribbon">Responded</span>}
                                   <small>{record.value_estimate || 'Opportunity'}</small>
                                 </td>
                                 <td>
@@ -2220,6 +2348,30 @@ function App() {
                                 </td>
                                 <td>{record.location || 'Not listed'}</td>
                                 <td>{record.campaign || 'Manual record'}</td>
+                                <td>
+                                  <div className="inline-row-actions">
+                                    <button
+                                      aria-label={`Edit ${record.company_name}`}
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        setSelectedCrmRecordId(record.id)
+                                      }}
+                                    >
+                                      <Edit3 size={15} />
+                                    </button>
+                                    <button
+                                      aria-label={`Delete ${record.company_name}`}
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        deleteCrmRecord(record.id, record.company_name)
+                                      }}
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -2229,8 +2381,13 @@ function App() {
                       {selectedCrmRecord && (
                         <aside className="crm-detail-panel" aria-label="Selected CRM record details">
                           <span className="decision-label">{selectedCrmRecord.stage}</span>
+                          {selectedCrmRecord.hasResponse && <span className="response-ribbon large">Response received</span>}
                           <h3>{selectedCrmRecord.company_name}</h3>
                           <dl>
+                            <div>
+                              <dt>Response</dt>
+                              <dd>{selectedCrmRecord.response || 'No response logged yet.'}</dd>
+                            </div>
                             <div>
                               <dt>Email</dt>
                               <dd>{selectedCrmRecord.email || 'Not captured'}</dd>
@@ -2292,7 +2449,92 @@ function App() {
                             >
                               Won
                             </button>
+                            <button type="button" onClick={() => deleteCrmRecord(selectedCrmRecord.id, selectedCrmRecord.company_name)}>
+                              Delete
+                            </button>
                           </div>
+                          <form className="crm-response-form" onSubmit={logCrmResponse}>
+                            <label>
+                              Response
+                              <textarea name="crmResponse" placeholder="Paste or summarize the reply from this contact." required />
+                            </label>
+                            <label>
+                              Next step
+                              <input name="crmResponseNextStep" placeholder="Reply, call, quote, vendor portal, or hold." type="text" />
+                            </label>
+                            <button type="submit">
+                              Save Response <MailCheck size={16} />
+                            </button>
+                          </form>
+                          <form className="crm-edit-form" key={selectedCrmRecord.id} onSubmit={updateCrmRecord}>
+                            <label>
+                              Company
+                              <input defaultValue={selectedCrmRecord.company_name} name="companyName" required type="text" />
+                            </label>
+                            <label>
+                              Contact
+                              <input defaultValue={selectedCrmRecord.contact_name || ''} name="contactName" type="text" />
+                            </label>
+                            <label>
+                              Title
+                              <input defaultValue={selectedCrmRecord.contact_title || ''} name="contactTitle" type="text" />
+                            </label>
+                            <label>
+                              Email
+                              <input defaultValue={selectedCrmRecord.email || ''} name="crmEmail" type="email" />
+                            </label>
+                            <label>
+                              Phone
+                              <input defaultValue={selectedCrmRecord.phone || ''} name="crmPhone" type="tel" />
+                            </label>
+                            <label>
+                              Location
+                              <input defaultValue={selectedCrmRecord.location || ''} name="crmLocation" type="text" />
+                            </label>
+                            <label>
+                              Segment
+                              <input defaultValue={selectedCrmRecord.segment || ''} name="crmSegment" type="text" />
+                            </label>
+                            <label>
+                              Stage
+                              <input defaultValue={selectedCrmRecord.stage} name="crmStage" type="text" />
+                            </label>
+                            <label>
+                              Owner
+                              <input defaultValue={selectedCrmRecord.owner || ''} name="crmOwner" type="text" />
+                            </label>
+                            <label>
+                              Value
+                              <input defaultValue={selectedCrmRecord.value_estimate || ''} name="crmValue" type="text" />
+                            </label>
+                            <label>
+                              Campaign
+                              <input defaultValue={selectedCrmRecord.campaign || ''} name="crmCampaign" type="text" />
+                            </label>
+                            <label>
+                              Channel
+                              <input defaultValue={selectedCrmRecord.channel || ''} name="crmChannel" type="text" />
+                            </label>
+                            <label>
+                              Website
+                              <input defaultValue={selectedCrmRecord.website || ''} name="crmWebsite" type="url" />
+                            </label>
+                            <label>
+                              Source
+                              <input defaultValue={selectedCrmRecord.source || ''} name="crmSource" type="url" />
+                            </label>
+                            <label className="wide">
+                              Why it fits
+                              <textarea defaultValue={selectedCrmRecord.whyFit || ''} name="crmFitReason" />
+                            </label>
+                            <label className="wide">
+                              Notes / next step
+                              <textarea defaultValue={selectedCrmRecord.next_step || ''} name="crmNextStep" />
+                            </label>
+                            <button type="submit">
+                              Save CRM Changes <ClipboardCheck size={16} />
+                            </button>
+                          </form>
                         </aside>
                       )}
                     </>
@@ -3349,6 +3591,9 @@ function App() {
                               <div className="proposal-actions">
                                 <button type="button" onClick={printSelectedProposal}>
                                   Download PDF <Download size={16} />
+                                </button>
+                                <button type="button" onClick={() => window.open(selectedProposalShareUrl, '_blank', 'noopener,noreferrer')}>
+                                  Open Link <ExternalLink size={16} />
                                 </button>
                                 <button
                                   type="button"
