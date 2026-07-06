@@ -2600,7 +2600,19 @@ function App() {
                           aria-selected={workspaceTab === tab.id}
                           className={workspaceTab === tab.id ? 'active' : ''}
                           key={tab.id}
-                          onClick={() => setWorkspaceTab(tab.id)}
+                          onClick={() => {
+                            if (tab.id === 'crm') {
+                              navigateTo('/crm')
+                              return
+                            }
+
+                            if (tab.id === 'proposals') {
+                              navigateTo('/proposals')
+                              return
+                            }
+
+                            setWorkspaceTab(tab.id)
+                          }}
                         >
                           {tab.label}
                         </button>
