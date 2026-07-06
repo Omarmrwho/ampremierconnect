@@ -61,18 +61,56 @@ export default async function handler(request: any, response: any) {
   }
 
   const projectId = String(request.body?.projectId || '').trim()
-  if (!projectId) {
-    json(response, 400, { error: 'Project id is required.' })
+  const projectName = String(request.body?.projectName || '').trim()
+  const deleteByName = Boolean(request.body?.deleteByName)
+  if (!projectId && !projectName) {
+    json(response, 400, { error: 'Project id or project name is required.' })
     return
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
-  const { error } = await adminClient.from('project_session_status').delete().eq('id', projectId)
+  const { data: projects, error: lookupError } = deleteByName && projectName
+    ? await adminClient.from('project_session_status').select('id').eq('project_name', projectName)
+    : await adminClient.from('project_session_status').select('id').eq('id', projectId)
+
+  if (lookupError) {
+    json(response, 500, { error: lookupError.message })
+    return
+  }
+
+  const projectIds = (projects || []).map((project) => project.id)
+  if (projectIds.length === 0) {
+    json(response, 200, { ok: true, deleted: 0 })
+    return
+  }
+
+  const childTables = [
+    'project_campaign_activities',
+    'project_crm_records',
+    'project_tasks',
+    'project_campaigns',
+    'project_proposals',
+    'project_ideas',
+    'project_agent_recommendations',
+  ]
+
+  for (const table of childTables) {
+    const { error: childError } = await adminClient.from(table).delete().in('project_id', projectIds)
+    if (childError) {
+      json(response, 500, { error: `${table}: ${childError.message}` })
+      return
+    }
+  }
+
+  const { count, error } = await adminClient
+    .from('project_session_status')
+    .delete({ count: 'exact' })
+    .in('id', projectIds)
 
   if (error) {
     json(response, 500, { error: error.message })
     return
   }
 
-  json(response, 200, { ok: true })
+  json(response, 200, { ok: true, deleted: count ?? 0 })
 }

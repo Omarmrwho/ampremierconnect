@@ -1415,6 +1415,75 @@ function App() {
     await loadCommandRecords()
   }
 
+  const deleteProjectWorkspacesByName = async (project: ProjectSessionStatus) => {
+    if (!supabase || !persistedProjectIds.has(project.id)) {
+      setProjectStatusMessage('Starter workspace cannot be deleted from Supabase because it is only a local placeholder.')
+      return
+    }
+
+    const matchingProjects = projectStatuses.filter((currentProject) => currentProject.project_name === project.project_name)
+    const confirmed = window.confirm(
+      `Delete all ${matchingProjects.length} workspace entries named "${project.project_name}" and their CRM/proposal records? This cannot be undone.`,
+    )
+    if (!confirmed) {
+      return
+    }
+
+    setProjectStatusMessage(`Deleting all ${project.project_name} workspaces...`)
+    let deletedProjectIds = matchingProjects.map((currentProject) => currentProject.id)
+    let deletedCount = matchingProjects.length
+
+    if (session?.access_token) {
+      try {
+        const response = await fetch('/api/delete-project', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ projectName: project.project_name, deleteByName: true }),
+        })
+        const payload = await response.json().catch(() => null)
+        if (!response.ok) {
+          setProjectStatusMessage(`Workspace delete failed: ${String(payload?.error || 'Workspace delete API failed.')}`)
+          return
+        }
+        deletedCount = Number(payload?.deleted || matchingProjects.length)
+      } catch (error) {
+        setProjectStatusMessage(`Workspace delete failed: ${error instanceof Error ? error.message : 'Workspace delete API failed.'}`)
+        return
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('project_session_status')
+        .delete()
+        .eq('project_name', project.project_name)
+        .select('id')
+
+      if (error) {
+        setProjectStatusMessage(`Workspace delete failed: ${error.message}`)
+        return
+      }
+
+      deletedProjectIds = (data || []).map((deletedProject) => deletedProject.id)
+      deletedCount = deletedProjectIds.length
+    }
+
+    const deletedProjectIdSet = new Set(deletedProjectIds)
+    setProjectStatusMessage(`${deletedCount} ${project.project_name} workspace entr${deletedCount === 1 ? 'y' : 'ies'} deleted.`)
+    setProjectStatuses((currentProjects) => currentProjects.filter((currentProject) => !deletedProjectIdSet.has(currentProject.id)))
+    setProjectTasks((currentTasks) => currentTasks.filter((task) => !deletedProjectIdSet.has(task.project_id)))
+    setProjectCrmRecords((currentRecords) => currentRecords.filter((record) => !deletedProjectIdSet.has(record.project_id)))
+    setProjectCampaigns((currentCampaigns) => currentCampaigns.filter((campaign) => !deletedProjectIdSet.has(campaign.project_id)))
+    setProjectCampaignActivities((currentActivities) => currentActivities.filter((activity) => !deletedProjectIdSet.has(activity.project_id)))
+    setProjectProposals((currentProposals) => currentProposals.filter((proposal) => !deletedProjectIdSet.has(proposal.project_id)))
+    setProjectIdeas((currentIdeas) => currentIdeas.filter((idea) => !deletedProjectIdSet.has(idea.project_id)))
+    setProjectAgentRecommendations((currentAgents) => currentAgents.filter((agent) => !deletedProjectIdSet.has(agent.project_id)))
+    setSelectedActionProjectId((currentProjectId) => (currentProjectId && deletedProjectIdSet.has(currentProjectId) ? null : currentProjectId))
+    await loadProjectStatuses()
+    await loadCommandRecords()
+  }
+
   const createCommandRecord = async (event: FormEvent<HTMLFormElement>, table: CreatableCommandTable) => {
     event.preventDefault()
     if (!selectedActionProject || !supabase) {
@@ -2419,14 +2488,25 @@ function App() {
                         <span>{project.client_name || 'Internal project'}</span>
                       </button>
                       {persistedProjectIds.has(project.id) && (
-                        <button
-                          type="button"
-                          className="project-delete-button"
-                          onClick={() => deleteProjectWorkspace(project)}
-                          aria-label={`Delete ${project.project_name}`}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="project-delete-actions">
+                          <button
+                            type="button"
+                            className="project-delete-button"
+                            onClick={() => deleteProjectWorkspace(project)}
+                            aria-label={`Delete ${project.project_name}`}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                          {projectStatuses.filter((currentProject) => currentProject.project_name === project.project_name).length > 1 && (
+                            <button
+                              type="button"
+                              className="project-delete-duplicates-button"
+                              onClick={() => deleteProjectWorkspacesByName(project)}
+                            >
+                              Delete duplicates
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -4565,16 +4645,29 @@ function App() {
                           {project.status}
                         </span>
                         {persistedProjectIds.has(project.id) && (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              deleteProjectWorkspace(project)
-                            }}
-                            aria-label={`Delete ${project.project_name}`}
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                deleteProjectWorkspace(project)
+                              }}
+                              aria-label={`Delete ${project.project_name}`}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                            {projectStatuses.filter((currentProject) => currentProject.project_name === project.project_name).length > 1 && (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  deleteProjectWorkspacesByName(project)
+                                }}
+                              >
+                                Delete duplicates
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
