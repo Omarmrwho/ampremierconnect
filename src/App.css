@@ -2686,6 +2686,10 @@ textarea {
 
 .project-card-actions .project-delete-duplicates-button {
   height: 34px;
+  width: auto;
+  min-width: max-content;
+  padding: 0 12px;
+  grid-auto-flow: column;
 }
 
 .project-card h3 {

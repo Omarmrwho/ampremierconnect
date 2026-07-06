@@ -1434,6 +1434,7 @@ function App() {
     setProjectStatusMessage(`Deleting all ${project.project_name} workspaces...`)
     let deletedProjectIds = matchingProjects.map((currentProject) => currentProject.id)
     let deletedCount = matchingProjects.length
+    let deleteError = ''
 
     if (session?.access_token) {
       try {
@@ -1447,20 +1448,22 @@ function App() {
         })
         const payload = await response.json().catch(() => null)
         if (!response.ok) {
-          setProjectStatusMessage(`Workspace delete failed: ${String(payload?.error || 'Workspace delete API failed.')}`)
-          return
-        }
-        deletedProjectIds = Array.isArray(payload?.deletedIds) ? payload.deletedIds : []
-        deletedCount = deletedProjectIds.length
-        if (deletedCount === 0) {
-          setProjectStatusMessage('Workspace delete failed: delete API returned zero deleted rows.')
-          return
+          deleteError = String(payload?.error || 'Workspace delete API failed.')
+        } else {
+          deletedProjectIds = Array.isArray(payload?.deletedIds) ? payload.deletedIds : []
+          deletedCount = deletedProjectIds.length
+          if (deletedCount === 0) {
+            deleteError = 'Workspace delete API returned zero deleted rows.'
+          }
         }
       } catch (error) {
-        setProjectStatusMessage(`Workspace delete failed: ${error instanceof Error ? error.message : 'Workspace delete API failed.'}`)
-        return
+        deleteError = error instanceof Error ? error.message : 'Workspace delete API failed.'
       }
     } else {
+      deleteError = 'Portal session is missing. Sign in again before deleting workspaces.'
+    }
+
+    if (deleteError) {
       const { data, error } = await supabase
         .from('project_session_status')
         .delete()
@@ -1468,12 +1471,16 @@ function App() {
         .select('id')
 
       if (error) {
-        setProjectStatusMessage(`Workspace delete failed: ${error.message}`)
+        setProjectStatusMessage(`Workspace delete failed: ${deleteError} Fallback delete also failed: ${error.message}`)
         return
       }
 
       deletedProjectIds = (data || []).map((deletedProject) => deletedProject.id)
       deletedCount = deletedProjectIds.length
+      if (deletedCount === 0) {
+        setProjectStatusMessage(`Workspace delete failed: ${deleteError} Fallback delete returned zero deleted rows.`)
+        return
+      }
     }
 
     const deletedProjectIdSet = new Set(deletedProjectIds)
