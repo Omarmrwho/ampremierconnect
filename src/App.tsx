@@ -2661,8 +2661,8 @@ function App() {
                 <section className="crm-replies-panel" aria-label="Email replies">
                   <div>
                     <span className="decision-label">Email Replies</span>
-                    <h3>{responseCrmRecords.length} logged responses</h3>
-                    <p>Replies will appear here once they are logged or synced into CRM records.</p>
+                    <h3>{responseCrmRecords.length} synced CRM replies</h3>
+                    <p>This counts replies that have been logged or imported into CRM records, not the live mailbox.</p>
                   </div>
                   {responseCrmRecords.length > 0 ? (
                     <div className="crm-replies-list">
@@ -2683,7 +2683,7 @@ function App() {
                     </div>
                   ) : (
                     <div className="empty-inline-note">
-                      No email replies are synced into the CRM yet. Paste a reply into a CRM record for now; mailbox auto-sync is the next backend piece.
+                      Real email replies may exist in the mailbox, but none are synced into the CRM yet. Paste/import the reply into a CRM record for now; mailbox auto-sync is the next backend piece.
                     </div>
                   )}
                 </section>
@@ -3400,8 +3400,8 @@ function App() {
                 <div className="panel-heading">
                   <MailCheck size={20} />
                   <div>
-                    <h2>Recent Replies</h2>
-                    <p>Fast view of replies and response signals across campaigns.</p>
+                    <h2>Recent Synced Replies</h2>
+                    <p>Fast view of replies and response signals already saved into the portal.</p>
                   </div>
                 </div>
                 {campaignReplyRows.length > 0 ? (
@@ -3441,8 +3441,7 @@ function App() {
                   </div>
                 ) : (
                   <div className="empty-inline-note">
-                    No campaign replies are logged yet. When a CRM record has Reply/Response text or a campaign activity
-                    has a response outcome, it will appear here.
+                    No campaign replies are synced into the portal yet. That does not mean the mailbox has zero replies; it means the replies still need to be imported or logged into CRM/campaign activity.
                   </div>
                 )}
               </section>
@@ -3777,10 +3776,10 @@ function App() {
                           <div className="campaign-reply-head">
                             <div>
 	                              <span className="decision-label">Reply Tracker</span>
-	                              <h3>{campaignReplyRows.length} campaign replies</h3>
+	                              <h3>{campaignReplyRows.length} synced campaign replies</h3>
 	                              <p>
-	                                See which emails replied, which workspace and campaign they came from, what happened,
-	                                and the next follow-up.
+	                                See which email replies have been imported or logged, which workspace and campaign they came from,
+	                                what happened, and the next follow-up.
 	                              </p>
                             </div>
                             <div className="campaign-reply-stats" aria-label="Reply counts">
@@ -3843,8 +3842,8 @@ function App() {
                             </div>
                           ) : (
 	                            <div className="empty-inline-note">
-	                              No replies are visible yet. Check that the CRM record has a response-like stage or
-	                              Reply/Response text, or log the reply as a campaign activity.
+	                              No replies are synced into the portal yet. If replies came into the mailbox, import or log them
+	                              into CRM/campaign activity so they appear here with the correct campaign.
 	                            </div>
                           )}
                         </section>
