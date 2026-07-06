@@ -3172,7 +3172,7 @@ function App() {
     )
   }
 
-  if (isCommandRoute || isProposalsRoute) {
+  if (isCommandRoute || isCampaignsRoute || isProposalsRoute) {
     return (
       <main className="portal-shell command-page-shell">
         <nav className="topbar" aria-label="Command portal navigation">
@@ -3216,16 +3216,26 @@ function App() {
           <section className={`command-section command-page ${isProposalsRoute ? 'proposals-page' : ''}`}>
             <div className="section-heading command-heading">
               <div>
-                <p className="eyebrow">{isProposalsRoute ? 'Proposal database' : 'Internal command portal'}</p>
-                <h1>{isProposalsRoute ? 'Proposal pipeline, access, and client-ready files.' : 'Live project status pulled from operating sessions.'}</h1>
+                <p className="eyebrow">
+                  {isProposalsRoute ? 'Proposal database' : isCampaignsRoute ? 'Campaign command center' : 'Internal command portal'}
+                </p>
+                <h1>
+                  {isProposalsRoute
+                    ? 'Proposal pipeline, access, and client-ready files.'
+                    : isCampaignsRoute
+                      ? 'Campaigns, replies, and outreach movement.'
+                      : 'Live project status pulled from operating sessions.'}
+                </h1>
                 <p className="hero-text">
                   {isProposalsRoute
                     ? 'A dedicated proposal workspace for drafts, links, PDF previews, and pipeline movement.'
-                    : 'Internal workspace for project health, next actions, blockers, and active session status.'}
+                    : isCampaignsRoute
+                      ? 'Track which emails replied, which campaign they came from, and what follow-up should happen next.'
+                      : 'Internal workspace for project health, next actions, blockers, and active session status.'}
                 </p>
               </div>
-              <button type="button" className="refresh-button" onClick={isProposalsRoute ? loadCommandRecords : loadProjectStatuses}>
-                {isProposalsRoute ? 'Refresh Proposals' : 'Refresh'} <Radio size={17} />
+              <button type="button" className="refresh-button" onClick={isProposalsRoute || isCampaignsRoute ? loadCommandRecords : loadProjectStatuses}>
+                {isProposalsRoute ? 'Refresh Proposals' : isCampaignsRoute ? 'Refresh Campaigns' : 'Refresh'} <Radio size={17} />
               </button>
             </div>
 
@@ -3472,7 +3482,7 @@ function App() {
                     </div>
                   </dl>
                 </div>
-                {selectedWorkspace && (isCrmRoute || isCampaignsRoute || isProposalsRoute) && (
+                {selectedWorkspace && (
                   <div className="workspace-command-center">
                     <div className="workspace-hero">
                       <div>
@@ -3497,6 +3507,11 @@ function App() {
                           onClick={() => {
                             if (tab.id === 'crm') {
                               navigateTo('/crm')
+                              return
+                            }
+
+                            if (tab.id === 'campaigns') {
+                              navigateTo('/campaigns')
                               return
                             }
 
