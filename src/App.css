@@ -2911,14 +2911,24 @@ textarea {
   margin-top: 15px;
 }
 
-.stats-grid div {
+.stats-grid button {
   display: grid;
+  text-align: left;
   gap: 4px;
   min-height: 112px;
   padding: 14px;
   border-radius: 8px;
   background: #ffffff;
   border: 1px solid rgba(19, 60, 79, 0.1);
+}
+
+.stats-grid button:hover,
+.stats-grid button:focus-visible,
+.stats-lanes button:hover,
+.stats-lanes button:focus-visible {
+  border-color: rgba(185, 95, 34, 0.45);
+  box-shadow: 0 14px 34px rgba(16, 35, 43, 0.11);
+  transform: translateY(-1px);
 }
 
 .stats-grid span,
@@ -2941,9 +2951,10 @@ textarea {
   margin-top: 12px;
 }
 
-.stats-lanes div {
+.stats-lanes button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  text-align: left;
   gap: 4px 12px;
   align-items: start;
   padding: 12px;

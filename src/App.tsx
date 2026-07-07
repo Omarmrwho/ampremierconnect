@@ -1193,6 +1193,39 @@ function App() {
     }
     navigateTo('/crm')
   }
+  const openProjectStatDrilldown = (label: string, note: string) => {
+    const drilldownText = `${label} ${note}`.toLowerCase()
+
+    if (drilldownText.match(/\b(reply|crm|target|deal|opportunit|contact|lead)\b/)) {
+      navigateTo('/crm')
+      return
+    }
+
+    if (drilldownText.match(/\b(campaign|sent|send|outreach|lane|folder|approval pack|movement)\b/)) {
+      navigateTo('/campaigns')
+      return
+    }
+
+    if (drilldownText.match(/\b(schedule|phase|validation|permit|owner|blocked|risk)\b/)) {
+      setWorkspaceTab('construction')
+      decisionDrawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
+    if (drilldownText.match(/\b(report|proposal|package|executive)\b/)) {
+      navigateTo('/proposals')
+      return
+    }
+
+    if (drilldownText.match(/\b(agent|assignment|qa|audit|research)\b/)) {
+      setWorkspaceTab('agents')
+      decisionDrawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
+    setWorkspaceTab('command')
+    decisionDrawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const selectedCrmReplyRecord =
     selectedCrmRecordId && selectedCrmRecord?.hasResponse ? selectedCrmRecord : null
   const selectedCrmReplyText = selectedCrmReplyRecord
@@ -5198,20 +5231,28 @@ function App() {
                     </div>
                     <div className="stats-grid">
                       {selectedProjectStats.metrics.map((metric) => (
-                        <div key={metric.label}>
+                        <button
+                          type="button"
+                          key={metric.label}
+                          onClick={() => openProjectStatDrilldown(metric.label, metric.note)}
+                        >
                           <span>{metric.label}</span>
                           <strong>{metric.value}</strong>
                           <small>{metric.note}</small>
-                        </div>
+                        </button>
                       ))}
                     </div>
                     <div className="stats-lanes" aria-label="Project lane breakdown">
                       {selectedProjectStats.lanes.map((lane) => (
-                        <div key={lane.name}>
+                        <button
+                          type="button"
+                          key={lane.name}
+                          onClick={() => openProjectStatDrilldown(lane.name, lane.note)}
+                        >
                           <strong>{lane.name}</strong>
                           <span>{lane.value}</span>
                           <small>{lane.note}</small>
-                        </div>
+                        </button>
                       ))}
                     </div>
                     <ul className="stats-highlights">
