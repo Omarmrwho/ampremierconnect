@@ -1174,6 +1174,25 @@ function App() {
     replies: campaignReplyRows.length,
   }
   const selectedReply = selectedReplyId ? campaignReplyRows.find((reply) => reply.id === selectedReplyId) || null : null
+  const openProjectDetail = (project: ProjectSessionStatus) => {
+    setSelectedActionProjectId(project.id)
+    setWorkspaceTab('command')
+    window.setTimeout(() => {
+      decisionDrawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }
+  const openProjectReplies = (project: ProjectSessionStatus) => {
+    const projectReply = campaignReplyRows.find((reply) => reply.projectId === project.id)
+
+    setSelectedActionProjectId(project.id)
+    if (projectReply) {
+      setSelectedReplyId(projectReply.id)
+      if (projectReply.campaignId) {
+        setSelectedCampaignId(projectReply.campaignId)
+      }
+    }
+    navigateTo('/crm')
+  }
   const selectedCrmReplyRecord =
     selectedCrmRecordId && selectedCrmRecord?.hasResponse ? selectedCrmRecord : null
   const selectedCrmReplyText = selectedCrmReplyRecord
@@ -5309,7 +5328,7 @@ function App() {
                   <article
                     className={`project-card ${selectedActionProjectId === project.id ? 'selected' : ''}`}
                     key={project.id}
-                    onClick={() => setSelectedActionProjectId(project.id)}
+                    onClick={() => openProjectDetail(project)}
                   >
                     <div className="project-card-top">
                       <div>
@@ -5318,13 +5337,18 @@ function App() {
                       </div>
                       <div className="project-card-actions">
                         {replyCount > 0 && (
-                          <span
+                          <button
+                            type="button"
                             className="project-reply-indicator"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              openProjectReplies(project)
+                            }}
                             title={`${replyCount} synced campaign ${replyCount === 1 ? 'reply' : 'replies'}`}
                           >
                             <MailCheck size={15} />
                             {replyCount === 1 ? 'Reply' : `${replyCount} Replies`}
-                          </span>
+                          </button>
                         )}
                         <span className={`health-pill ${project.health}`}>
                           {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}

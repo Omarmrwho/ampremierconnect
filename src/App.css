@@ -3185,6 +3185,21 @@ textarea {
   grid-auto-flow: column;
 }
 
+.project-card-actions .project-reply-indicator {
+  display: inline-flex;
+  width: auto;
+  min-width: max-content;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: #0f6b4a;
+  background: #e8f7f0;
+}
+
+.project-card-actions .project-reply-indicator:hover {
+  background: #d8f1e7;
+}
+
 .project-card h3 {
   margin-bottom: 4px;
   color: #10232b;
