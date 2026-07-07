@@ -13,6 +13,7 @@ const clientSecretPath = path.join(secretsRoot, 'client_secret.txt');
 const syncStatePath = path.join(workspaceRoot, 'memory', 'ampremierconnect-email-reply-sync-state.json');
 
 const internalDomains = new Set(['ampremiersolutions.com', 'ampremierconnect.com']);
+const unmatchedImportFlag = '--create-unmatched-unsafe';
 const ignoredDomains = new Set([
   'adp.com',
   'e.progressive.com',
@@ -239,21 +240,26 @@ async function insertCrmRecord(supabase, values) {
 
 function findMatch(message, crmRows) {
   const from = normalizeEmail(message.from?.emailAddress?.address);
-  const domain = emailDomain(from);
+  const receivedAt = Date.parse(message.receivedDateTime || '');
 
   const exact = crmRows.find((row) => normalizeEmail(row.email) === from);
-  if (exact) return { row: exact, confidence: 'exact-email' };
+  if (!exact) return null;
 
-  if (!domain || ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com'].includes(domain)) {
+  if (!exact.campaign_name || exact.campaign_name === 'Inbox reply import') {
     return null;
   }
 
-  const domainMatches = crmRows.filter((row) => emailDomain(row.email) === domain);
-  if (domainMatches.length === 1) {
-    return { row: domainMatches[0], confidence: 'same-domain' };
+  const lastContactedAt = Date.parse(exact.last_contacted_at || '');
+  if (!Number.isFinite(lastContactedAt) || !Number.isFinite(receivedAt)) {
+    return null;
   }
 
-  return null;
+  const oneHour = 60 * 60 * 1000;
+  if (receivedAt + oneHour < lastContactedAt) {
+    return null;
+  }
+
+  return { row: exact, confidence: 'exact-campaign-email' };
 }
 
 function alreadyLogged(row, message) {
@@ -263,7 +269,7 @@ function alreadyLogged(row, message) {
 
 async function main() {
   const apply = process.argv.includes('--apply');
-  const createUnmatched = process.argv.includes('--create-unmatched');
+  const createUnmatched = process.argv.includes(unmatchedImportFlag);
   const daysArg = Number((process.argv.find((arg) => arg.startsWith('--days=')) || '').split('=')[1]);
   const topArg = Number((process.argv.find((arg) => arg.startsWith('--top=')) || '').split('=')[1]);
   const days = Number.isFinite(daysArg) && daysArg > 0 ? Math.min(daysArg, 30) : 14;
