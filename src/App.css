@@ -174,7 +174,8 @@ h1 {
   font-size: clamp(36px, 6vw, 76px);
   line-height: 0.98;
   letter-spacing: 0;
-  overflow-wrap: anywhere;
+  text-wrap: balance;
+  overflow-wrap: normal;
 }
 
 .hero-text {
@@ -3612,14 +3613,25 @@ textarea {
 
 @media (max-width: 1180px) {
   .hero-band {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 410px);
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 28px;
   }
 
   .hero-media-card {
-    grid-column: 1 / -1;
     grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
     grid-template-rows: auto;
     min-height: 0;
+  }
+
+  .hero-copy,
+  .hero-text {
+    max-width: 760px;
+  }
+
+  h1 {
+    max-width: 760px;
+    font-size: clamp(42px, 7vw, 68px);
   }
 
   .hero-media-card img {
