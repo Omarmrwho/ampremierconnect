@@ -57,6 +57,18 @@
   font-weight: 800;
 }
 
+.brand-logo-mark {
+  width: 116px;
+  background: #ffffff;
+  border: 1px solid rgba(19, 60, 79, 0.12);
+}
+
+.brand-logo-mark img {
+  display: block;
+  width: 92px;
+  height: auto;
+}
+
 .brand strong,
 .brand small {
   display: block;
@@ -127,7 +139,7 @@ a.secondary-action,
 
 .hero-band {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 430px);
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 410px) minmax(260px, 360px);
   gap: clamp(28px, 5vw, 70px);
   align-items: center;
   min-height: calc(100vh - 172px);
@@ -176,6 +188,67 @@ h1 {
 .hero-actions {
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.trust-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(19, 60, 79, 0.12);
+  border-radius: 999px;
+  color: #25414c;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.hero-media-card {
+  align-self: stretch;
+  display: grid;
+  grid-template-rows: minmax(280px, 1fr) auto;
+  min-height: 430px;
+  overflow: hidden;
+  border: 1px solid rgba(19, 60, 79, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 70px rgba(16, 35, 43, 0.12);
+}
+
+.hero-media-card img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.hero-media-card div {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border-top: 1px solid rgba(19, 60, 79, 0.1);
+  background: #f8faf8;
+}
+
+.hero-media-card span {
+  color: #9b5a22;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.hero-media-card strong {
+  color: #10232b;
+  line-height: 1.3;
 }
 
 .role-tabs {
@@ -599,10 +672,30 @@ textarea {
   text-align: left;
 }
 
+.crm-replies-list button:hover,
+.crm-replies-list button.selected {
+  border-color: rgba(47, 125, 101, 0.38);
+  background: #eef5f1;
+  box-shadow: inset 3px 0 0 #2f7d65;
+}
+
 .crm-replies-list span {
   color: #526168;
   font-size: 12px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.crm-selected-reply-reader {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0;
+  padding: 16px;
+  border: 1px solid rgba(47, 125, 101, 0.24);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 14px 36px rgba(19, 60, 79, 0.08);
 }
 
 .crm-toolbar {
@@ -1424,6 +1517,7 @@ textarea {
   width: 100%;
   min-width: 860px;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .campaign-reply-table th,
@@ -1435,6 +1529,32 @@ textarea {
   vertical-align: top;
   font-size: 13px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.campaign-reply-table th:nth-child(1),
+.campaign-reply-table td:nth-child(1) {
+  width: 18%;
+}
+
+.campaign-reply-table th:nth-child(2),
+.campaign-reply-table td:nth-child(2) {
+  width: 18%;
+}
+
+.campaign-reply-table th:nth-child(3),
+.campaign-reply-table td:nth-child(3),
+.campaign-reply-table th:nth-child(4),
+.campaign-reply-table td:nth-child(4) {
+  width: 22%;
+}
+
+.campaign-reply-table th:nth-child(5),
+.campaign-reply-table td:nth-child(5),
+.campaign-reply-table th:nth-child(6),
+.campaign-reply-table td:nth-child(6) {
+  width: 10%;
 }
 
 .campaign-reply-table th {
@@ -1462,6 +1582,9 @@ textarea {
 .campaign-reply-table td strong,
 .campaign-reply-table td small {
   display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .campaign-reply-table td strong {
@@ -1478,10 +1601,35 @@ textarea {
 .reply-detail-panel {
   display: grid;
   gap: 14px;
+  min-width: 0;
+  max-width: 100%;
   padding: 16px;
   border: 1px solid rgba(19, 60, 79, 0.12);
   border-radius: 8px;
   background: #ffffff;
+  overflow: hidden;
+}
+
+.reply-detail-panel.compact {
+  border-color: rgba(47, 125, 101, 0.2);
+  background: #ffffff;
+}
+
+.crm-reply-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(12, 27, 34, 0.48);
+}
+
+.crm-reply-dialog {
+  width: min(820px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow-y: auto;
+  box-shadow: 0 24px 70px rgba(12, 27, 34, 0.28);
 }
 
 .reply-detail-head {
@@ -1514,6 +1662,7 @@ textarea {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
+  min-width: 0;
 }
 
 .reply-detail-meta div,
@@ -1542,6 +1691,8 @@ textarea {
 .reply-body-card {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .reply-body-card p {
@@ -1551,6 +1702,7 @@ textarea {
   line-height: 1.55;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .reply-body-card.muted {
@@ -1990,6 +2142,7 @@ textarea {
   gap: 12px;
   align-items: start;
   width: 100%;
+  min-width: 0;
   padding: 12px;
   border: 1px solid rgba(19, 60, 79, 0.1);
   border-radius: 8px;
@@ -2007,6 +2160,7 @@ textarea {
 .command-reply-row small {
   display: block;
   min-width: 0;
+  max-width: 100%;
 }
 
 .command-reply-row strong {
@@ -2014,6 +2168,7 @@ textarea {
   font-size: 13px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .command-reply-row small {
@@ -2023,6 +2178,7 @@ textarea {
   font-weight: 750;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .secondary-inline-action {
@@ -2534,6 +2690,7 @@ textarea {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+  min-width: 0;
 }
 
 .workspace-kpi-grid div,
@@ -2663,8 +2820,34 @@ textarea {
 .campaign-card,
 .agent-card {
   display: grid;
+  align-content: start;
   gap: 8px;
+  min-width: 0;
   padding: 14px;
+  overflow: hidden;
+}
+
+.crm-card > *,
+.campaign-card > *,
+.agent-card > * {
+  min-width: 0;
+}
+
+.crm-card h3,
+.campaign-card h3,
+.agent-card h3 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.crm-card p {
+  display: -webkit-box;
+  max-height: 9.8em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 7;
 }
 
 .campaign-card > div {
@@ -3357,6 +3540,23 @@ textarea {
   background: #133c4f;
 }
 
+@media (max-width: 1180px) {
+  .hero-band {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 410px);
+  }
+
+  .hero-media-card {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+    grid-template-rows: auto;
+    min-height: 0;
+  }
+
+  .hero-media-card img {
+    min-height: 240px;
+  }
+}
+
 @media (max-width: 860px) {
   .topbar {
     position: static;
@@ -3402,6 +3602,11 @@ textarea {
 
   .hero-band {
     min-height: auto;
+  }
+
+  .hero-media-card {
+    min-height: auto;
+    grid-template-rows: minmax(260px, 360px) auto;
   }
 
   .metrics-row div {
@@ -3544,6 +3749,15 @@ textarea {
     flex: 0 0 38px;
   }
 
+  .brand-logo-mark {
+    width: 108px;
+    flex-basis: 108px;
+  }
+
+  .brand-logo-mark img {
+    width: 86px;
+  }
+
   .brand strong {
     font-size: 15px;
     line-height: 1.15;
@@ -3664,6 +3878,10 @@ textarea {
   }
 
   .role-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-media-card {
     grid-template-columns: 1fr;
   }
 

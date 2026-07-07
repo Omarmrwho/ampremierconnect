@@ -87,34 +87,34 @@ const accessLanes = [
   {
     icon: Building2,
     title: 'Client Portal',
-    description: 'Project status, intake requests, deliverables, and decision logs.',
-    status: 'Auth ready',
+    description: 'Project intake, status updates, deliverables, and decision records in one controlled place.',
+    status: 'Secure access',
   },
   {
     icon: UsersRound,
     title: 'Vendor Access',
-    description: 'Qualification, documents, bid packages, and project communications.',
-    status: 'Approval gated',
+    description: 'Vendor qualification, documents, bid packages, and project communications.',
+    status: 'Approval required',
   },
   {
     icon: ShieldCheck,
     title: 'Internal Admin',
-    description: 'Deal rooms, approvals, operating priorities, and account controls.',
-    status: 'Admin queue live',
+    description: 'Approvals, active workspaces, opportunity tracking, and account controls.',
+    status: 'Restricted',
   },
 ]
 
 const operatingQueue = [
-  'Review pending access requests',
-  'Monitor intake drafts',
-  'Approve client and vendor portal roles',
-  'Keep internal accounts restricted',
+  'Submit a request',
+  'Receive admin approval',
+  'Coordinate documents and updates',
+  'Keep project decisions traceable',
 ]
 
 const readinessItems = [
-  { label: 'Domain', value: 'Connected through Vercel DNS' },
-  { label: 'Backend', value: 'Supabase forms, auth, and profiles' },
-  { label: 'Control', value: 'Internal approval workflow' },
+  { label: 'Secure Access', value: 'Login and approval workflow' },
+  { label: 'Project Intake', value: 'Structured requests and updates' },
+  { label: 'Operations', value: 'Client, vendor, and internal lanes' },
 ]
 
 const projectFilters = ['all', 'active', 'waiting', 'blocked', 'complete'] as const
@@ -199,6 +199,11 @@ type ProjectCrmRecord = {
   channel?: string | null
   last_contacted_at?: string | null
   last_contact_subject?: string | null
+  reply_body?: string | null
+  reply_preview?: string | null
+  reply_from?: string | null
+  reply_received_at?: string | null
+  reply_message_id?: string | null
   fit_reason?: string | null
   stage: string
   owner: string | null
@@ -293,6 +298,15 @@ type ParsedCrmRecord = ProjectCrmRecord & {
   response: string
   hasResponse: boolean
   followUp: string
+}
+
+type WorkspaceCrmCard = {
+  id: string
+  name: string
+  stage: string
+  nextStep: string
+  owner: string
+  persisted: boolean
 }
 
 type CampaignReplyRow = {
@@ -767,10 +781,56 @@ const getCrmField = (details: string | null, label: string) => {
   return match?.[1]?.trim() || ''
 }
 
-const getReadableReplyBody = (details: string | null, fallback: string) => {
-  const fullBody = getCrmField(details, 'Body') || getCrmField(details, 'Message')
-  const response = getCrmField(details, 'Response') || getCrmField(details, 'Reply')
-  return fullBody || response || fallback || 'No readable reply text was saved for this row yet.'
+const getReplyDetailField = (details: string | null, label: string) => {
+  if (!details) {
+    return ''
+  }
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = details.match(
+    new RegExp(
+      `(?:^|\\s\\|\\s)${escapedLabel}:\\s*([\\s\\S]*?)(?=\\s\\|\\s(?:Response from|Response date|Graph message id|Response match|$):|$)`,
+      'i',
+    ),
+  )
+  return match?.[1]?.trim() || ''
+}
+
+const removeQuotedEmailTrail = (value: string) =>
+  value
+    .split(/\n\s*(?:On .+ wrote:|From: .+|Sent: .+|To: .+|Subject: .+)/i)[0]
+    .replace(/\s*\|?\s*Response from:\s*[\s\S]*$/i, '')
+    .trim()
+
+const getReadableReplyBody = (record: Pick<ProjectCrmRecord, 'next_step' | 'reply_body' | 'reply_preview' | 'last_contact_subject'>, fallback = '') => {
+  const details = record.next_step || ''
+  const body =
+    record.reply_body ||
+    getReplyDetailField(details, 'Body') ||
+    getReplyDetailField(details, 'Message') ||
+    getCrmField(details, 'Body') ||
+    getCrmField(details, 'Message')
+  const preview = record.reply_preview || getReplyDetailField(details, 'Preview')
+  const response = getReplyDetailField(details, 'Response') || getCrmField(details, 'Response') || getCrmField(details, 'Reply')
+  const subjectOnly = record.last_contact_subject ? `Subject: ${record.last_contact_subject}` : ''
+  const readable = removeQuotedEmailTrail(body || preview || response || fallback || subjectOnly)
+
+  return readable || 'No readable reply body was saved for this row yet.'
+}
+
+const cleanDisplayText = (value: string, maxLength = 280) => {
+  const compact = value
+    .replace(/\bGraph message id:\s*\S+/gi, '')
+    .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, (email) => email.toLowerCase())
+    .replace(/\s*\|\s*/g, ' | ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (compact.length <= maxLength) {
+    return compact
+  }
+
+  return `${compact.slice(0, maxLength).trim()}...`
 }
 
 const responseSignalPattern =
@@ -789,7 +849,13 @@ const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
   const source = record.source_url || getCrmField(details, 'Source')
   const whyFit = record.fit_reason || getCrmField(details, 'Why fit')
   const campaign = record.campaign_name || getCrmField(details, 'Campaign')
-  const response = getCrmField(details, 'Response') || getCrmField(details, 'Reply')
+  const response =
+    record.reply_body ||
+    record.reply_preview ||
+    getReplyDetailField(details, 'Preview') ||
+    getReplyDetailField(details, 'Body') ||
+    getCrmField(details, 'Response') ||
+    getCrmField(details, 'Reply')
   const sent = record.last_contacted_at
     ? `${record.last_contacted_at.slice(0, 10)}${record.last_contact_subject ? ` | ${record.last_contact_subject}` : ''}`
     : getCrmField(details, 'Sent')
@@ -811,7 +877,12 @@ const parseCrmRecord = (record: ProjectCrmRecord): ParsedCrmRecord => {
     campaign,
     sent,
     response,
-    hasResponse: Boolean(response || hasResponseSignal(record.stage, record.next_step)),
+    hasResponse: Boolean(
+      response ||
+        record.reply_body ||
+        record.reply_preview ||
+        hasResponseSignal(record.stage, record.next_step, record.last_contact_subject),
+    ),
     followUp: manualNextStep || extraRoutes || 'Review reply status and schedule next touch.',
   }
 }
@@ -1078,19 +1149,26 @@ function App() {
           contactEmail: record.email || 'No email captured',
           replyDate: record.last_contacted_at?.slice(0, 10) || 'Date not logged',
           outcome: record.response || record.stage || 'Response logged',
-          replyBody: getReadableReplyBody(record.next_step, record.response || record.stage),
+          replyBody: getReadableReplyBody(record, record.response || record.stage),
           nextStep: record.followUp || record.next_step || 'Review and assign follow-up.',
         }
       }),
     ...campaignActivityRows,
   ].sort((left, right) => right.replyDate.localeCompare(left.replyDate))
-  const selectedReply =
-    campaignReplyRows.find((reply) => reply.id === selectedReplyId) ||
-    campaignReplyRows[0] ||
-    null
-  const selectedProjectProposals = proposalTargetProject
-    ? projectProposals.filter((proposal) => proposal.project_id === proposalTargetProject.id)
-    : []
+  const selectedReply = selectedReplyId ? campaignReplyRows.find((reply) => reply.id === selectedReplyId) || null : null
+  const selectedCrmReplyRecord =
+    selectedCrmRecordId && selectedCrmRecord?.hasResponse ? selectedCrmRecord : null
+  const selectedCrmReplyText = selectedCrmReplyRecord
+    ? getReadableReplyBody(selectedCrmReplyRecord, selectedCrmReplyRecord.response || selectedCrmReplyRecord.stage)
+    : ''
+  const commandPipelineCrmRecords = parsedSelectedProjectCrmRecords.filter((record) => !record.hasResponse)
+  const selectedProjectProposals = useMemo(
+    () =>
+      proposalTargetProject
+        ? projectProposals.filter((proposal) => proposal.project_id === proposalTargetProject.id)
+        : [],
+    [projectProposals, proposalTargetProject],
+  )
   const proposalSearchText = proposalSearch.trim().toLowerCase()
   const filteredProjectProposals = projectProposals.filter((proposal) => {
     const matchesStatus = proposalStatusFilter === 'all' || proposal.status === proposalStatusFilter
@@ -1366,7 +1444,7 @@ function App() {
 
     setCommandDataStatus('Loading project workspace records...')
     const crmSelect =
-      'id,project_id,company_name,contact_name,contact_title,email,phone,location,segment,website,source_url,campaign_name,channel,last_contacted_at,last_contact_subject,fit_reason,stage,owner,next_step,value_estimate'
+      'id,project_id,company_name,contact_name,contact_title,email,phone,location,segment,website,source_url,campaign_name,channel,last_contacted_at,last_contact_subject,reply_body,reply_preview,reply_from,reply_received_at,reply_message_id,fit_reason,stage,owner,next_step,value_estimate'
     const crmFallbackSelect = 'id,project_id,company_name,contact_name,stage,owner,next_step,value_estimate'
     const [tasksResult, crmResult, campaignsResult, campaignActivitiesResult, proposalsResult, ideasResult, agentsResult] = await Promise.all([
       supabase
@@ -2698,15 +2776,17 @@ function App() {
                       {responseCrmRecords.slice(0, 6).map((record) => (
                         <button
                           type="button"
+                          className={selectedReply?.id === `crm-${record.id}` ? 'selected' : ''}
                           key={record.id}
                           onClick={() => {
                             setSelectedActionProjectId(record.project_id)
                             setSelectedCrmRecordId(record.id)
+                            setSelectedReplyId(`crm-${record.id}`)
                             setCrmGapFilter('has-response')
                           }}
                         >
                           <strong>{record.company_name}</strong>
-                          <span>{record.response || record.followUp}</span>
+                          <span>{cleanDisplayText(getReadableReplyBody(record, record.response || record.followUp), 180)}</span>
                         </button>
                       ))}
                     </div>
@@ -2714,6 +2794,38 @@ function App() {
                     <div className="empty-inline-note">
                       Real email replies may exist in the mailbox, but none are synced into the CRM yet. Paste/import the reply into a CRM record for now; mailbox auto-sync is the next backend piece.
                     </div>
+                  )}
+                  {selectedReplyId && selectedReply && selectedReply.source === 'CRM reply' && (
+                    <aside className="reply-detail-panel compact" aria-label="Selected email reply">
+                      <div className="reply-detail-head">
+                        <div>
+                          <span className="decision-label">Selected Reply</span>
+                          <h3>{selectedReply.companyName || selectedReply.contactName || selectedReply.contactEmail}</h3>
+                          <p>{selectedReply.contactEmail}</p>
+                        </div>
+                        <button type="button" className="secondary-inline-action" onClick={() => setSelectedReplyId(null)}>
+                          Clear
+                        </button>
+                      </div>
+                      <dl className="reply-detail-meta">
+                        <div>
+                          <dt>Campaign</dt>
+                          <dd>{selectedReply.campaignName}</dd>
+                        </div>
+                        <div>
+                          <dt>Date</dt>
+                          <dd>{selectedReply.replyDate}</dd>
+                        </div>
+                      </dl>
+                      <div className="reply-body-card">
+                        <span className="decision-label">Reply Text</span>
+                        <p>{selectedReply.replyBody}</p>
+                      </div>
+                      <div className="reply-body-card muted">
+                        <span className="decision-label">Next Step</span>
+                        <p>{selectedReply.nextStep}</p>
+                      </div>
+                    </aside>
                   )}
                 </section>
 
@@ -2842,6 +2954,163 @@ function App() {
                   </button>
                 </form>
 
+                <section className="campaign-reply-tracker crm-reply-tracker" aria-label="CRM campaign replies">
+                  <div className="campaign-reply-head">
+                    <div>
+                      <span className="decision-label">Reply Tracker</span>
+                      <h3>{campaignReplyRows.length} replies for this CRM workspace</h3>
+                      <p>
+                        Replies imported from email and campaign activity now live inside CRM too. Click any row to read
+                        the full reply text and next follow-up.
+                      </p>
+                    </div>
+                    <div className="campaign-reply-stats" aria-label="CRM reply counts">
+                      <span>
+                        <strong>{campaignReplyRows.filter((reply) => reply.contactEmail !== 'No email captured in activity').length}</strong>
+                        with email
+                      </span>
+                      <span>
+                        <strong>{campaignReplyRows.filter((reply) => reply.source === 'Campaign activity').length}</strong>
+                        logged activities
+                      </span>
+                      <span>
+                        <strong>{selectedProjectResponseCount}</strong>
+                        CRM responses
+                      </span>
+                    </div>
+                  </div>
+                  {campaignReplyRows.length > 0 ? (
+                    <div className="campaign-reply-table-wrap">
+                      <table className="campaign-reply-table">
+                        <thead>
+                          <tr>
+                            <th>Email / Contact</th>
+                            <th>Campaign</th>
+                            <th>Reply</th>
+                            <th>Next Step</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {campaignReplyRows.map((reply) => (
+                            <tr
+                              className={selectedReply?.id === reply.id ? 'selected' : ''}
+                              key={reply.id}
+                              onClick={() => {
+                                if (reply.campaignId) {
+                                  setSelectedCampaignId(reply.campaignId)
+                                }
+                                setSelectedReplyId(reply.id)
+                              }}
+                            >
+                              <td>
+                                <strong>{reply.contactEmail}</strong>
+                                <small>{reply.companyName || reply.contactName || 'Contact not tagged'}</small>
+                              </td>
+                              <td>
+                                <strong>{reply.campaignName}</strong>
+                                <small>{reply.source}</small>
+                              </td>
+                              <td>{reply.outcome}</td>
+                              <td>{reply.nextStep}</td>
+                              <td>{reply.replyDate}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="empty-inline-note">
+                      No replies are synced into this CRM workspace yet. If replies came into the mailbox, import or log
+                      them into CRM/campaign activity so they appear here.
+                    </div>
+                  )}
+                  {selectedReply && (
+                    <div
+                      className="crm-reply-modal"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Selected CRM reply"
+                      onClick={() => setSelectedReplyId(null)}
+                    >
+                      <aside className="reply-detail-panel crm-reply-dialog" onClick={(event) => event.stopPropagation()}>
+                        <div className="reply-detail-head">
+                          <div>
+                            <span className="decision-label">{selectedReply.source}</span>
+                            <h3>{selectedReply.contactEmail}</h3>
+                            <p>{selectedReply.companyName || selectedReply.contactName || 'Contact not tagged'}</p>
+                          </div>
+                          <button type="button" className="secondary-inline-action" onClick={() => setSelectedReplyId(null)}>
+                            Close
+                          </button>
+                        </div>
+                        <dl className="reply-detail-meta">
+                          <div>
+                            <dt>Workspace</dt>
+                            <dd>{selectedReply.projectName}</dd>
+                          </div>
+                          <div>
+                            <dt>Campaign</dt>
+                            <dd>{selectedReply.campaignName}</dd>
+                          </div>
+                          <div>
+                            <dt>Date</dt>
+                            <dd>{selectedReply.replyDate}</dd>
+                          </div>
+                        </dl>
+                        <div className="reply-body-card">
+                          <span className="decision-label">Reply Text</span>
+                          <p>{selectedReply.replyBody}</p>
+                        </div>
+                        <div className="reply-body-card muted">
+                          <span className="decision-label">Next Step</span>
+                          <p>{selectedReply.nextStep}</p>
+                        </div>
+                      </aside>
+                    </div>
+                  )}
+                </section>
+
+                {selectedCrmReplyRecord && (
+                  <section className="crm-selected-reply-reader" aria-label="Selected CRM reply body">
+                    <div className="reply-detail-head">
+                      <div>
+                        <span className="decision-label">CRM Reply Open</span>
+                        <h3>{selectedCrmReplyRecord.company_name}</h3>
+                        <p>{selectedCrmReplyRecord.email || selectedCrmReplyRecord.contact_name || 'Contact not captured'}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="secondary-inline-action"
+                        onClick={() => {
+                          setSelectedReplyId(null)
+                          setSelectedCrmRecordId(null)
+                        }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <dl className="reply-detail-meta">
+                      <div>
+                        <dt>Campaign</dt>
+                        <dd>{selectedCrmReplyRecord.campaign || 'Campaign not tagged'}</dd>
+                      </div>
+                      <div>
+                        <dt>Date</dt>
+                        <dd>{selectedCrmReplyRecord.reply_received_at?.slice(0, 10) || selectedCrmReplyRecord.last_contacted_at?.slice(0, 10) || 'Date not logged'}</dd>
+                      </div>
+                      <div>
+                        <dt>From</dt>
+                        <dd>{selectedCrmReplyRecord.reply_from || selectedCrmReplyRecord.email || 'Sender not captured'}</dd>
+                      </div>
+                    </dl>
+                    <div className="reply-body-card">
+                      <span className="decision-label">Reply Body</span>
+                      <p>{selectedCrmReplyText}</p>
+                    </div>
+                  </section>
+                )}
+
                 <div className="crm-record-workbench">
                   {selectedProjectCrmRecords.length === 0 ? (
                     <article className="empty-project-state">
@@ -2890,7 +3159,12 @@ function App() {
                               <tr
                                 className={selectedCrmRecord?.id === record.id ? 'selected' : ''}
                                 key={record.id}
-                                onClick={() => setSelectedCrmRecordId(record.id)}
+                                onClick={() => {
+                                  setSelectedCrmRecordId(record.id)
+                                  if (record.hasResponse) {
+                                    setSelectedReplyId(`crm-${record.id}`)
+                                  }
+                                }}
                               >
                                 <td>
                                   <input
@@ -2924,6 +3198,9 @@ function App() {
                                       onClick={(event) => {
                                         event.stopPropagation()
                                         setSelectedCrmRecordId(record.id)
+                                        if (record.hasResponse) {
+                                          setSelectedReplyId(`crm-${record.id}`)
+                                        }
                                       }}
                                     >
                                       <Edit3 size={15} />
@@ -2954,7 +3231,11 @@ function App() {
                           <dl>
                             <div>
                               <dt>Response</dt>
-                              <dd>{selectedCrmRecord.response || 'No response logged yet.'}</dd>
+                              <dd>
+                                {selectedCrmRecord.hasResponse
+                                  ? getReadableReplyBody(selectedCrmRecord, selectedCrmRecord.response || selectedCrmRecord.stage)
+                                  : 'No response logged yet.'}
+                              </dd>
                             </div>
                             <div>
                               <dt>Email</dt>
@@ -3448,7 +3729,7 @@ function App() {
                             setSelectedCampaignId(reply.campaignId)
                           }
                           setSelectedReplyId(reply.id)
-                          navigateTo('/campaigns')
+                          navigateTo('/crm')
                         }}
                       >
                         <span>
@@ -3465,8 +3746,8 @@ function App() {
                         </span>
                       </button>
                     ))}
-                    <button type="button" className="secondary-inline-action" onClick={() => navigateTo('/campaigns')}>
-                      Open full Reply Tracker
+                    <button type="button" className="secondary-inline-action" onClick={() => navigateTo('/crm')}>
+                      Open CRM Reply Tracker
                     </button>
                   </div>
                 ) : (
@@ -3707,20 +3988,27 @@ function App() {
                           </button>
                         </div>
                         <div className="crm-grid">
-                          {(selectedProjectCrmRecords.length > 0
-                            ? selectedProjectCrmRecords.map((record) => ({
+                          {(commandPipelineCrmRecords.length > 0
+                            ? commandPipelineCrmRecords.map((record): WorkspaceCrmCard => ({
                                 id: record.id,
                                 name: record.company_name,
                                 stage: record.stage,
-                                nextStep: `${record.next_step || 'No next step captured.'}${
-                                  record.contact_name ? ` Contact: ${record.contact_name}.` : ''
-                                }${record.value_estimate ? ` Value: ${record.value_estimate}.` : ''}`,
+                                nextStep: cleanDisplayText(
+                                  [
+                                    record.contact_name ? `Contact: ${record.contact_name}.` : '',
+                                    record.value_estimate ? `Value: ${record.value_estimate}.` : '',
+                                    record.followUp || record.next_step || 'No next step captured.',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' '),
+                                ),
                                 owner: record.owner || 'Unassigned',
                                 persisted: true,
                               }))
-                            : selectedWorkspace.crm.companies.map((company) => ({
+                            : selectedWorkspace.crm.companies.map((company): WorkspaceCrmCard => ({
                                 ...company,
                                 id: company.name,
+                                nextStep: cleanDisplayText(company.nextStep),
                                 persisted: false,
                               }))
                           ).map((company) => (
@@ -5165,10 +5453,12 @@ function App() {
     <main className="portal-shell">
       <nav className="topbar" aria-label="Primary navigation">
         <a className="brand" href="/" aria-label="AM Premier Connect home">
-          <span className="brand-mark">AP</span>
+          <span className="brand-mark brand-logo-mark">
+            <img src={brandLogo} alt="" />
+          </span>
           <span>
             <strong>AM Premier Connect</strong>
-            <small>Client and vendor operations portal</small>
+            <small>Secure project portal</small>
           </span>
         </a>
         <div className="nav-actions">
@@ -5179,9 +5469,11 @@ function App() {
               CRM
             </button>
           )}
-          <button type="button" onClick={() => navigateTo('/chat')}>
-            Elara Workspace
-          </button>
+          {isInternal && (
+            <button type="button" onClick={() => navigateTo('/chat')}>
+              Workspace
+            </button>
+          )}
           {session ? (
             <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
               <LogOut size={18} />
@@ -5196,11 +5488,10 @@ function App() {
 
       <section className="hero-band">
         <div className="hero-copy">
-          <p className="eyebrow">ampremierconnect.com</p>
-          <h1>Secure operating portal for AM Premier projects.</h1>
+          <p className="eyebrow">AM Premier Connect</p>
+          <h1>Secure project access for AM Premier clients and partners.</h1>
           <p className="hero-text">
-            A controlled login hub for client requests, vendor coordination, project evidence, and internal
-            deal-room execution.
+            Request access, submit project needs, coordinate vendor documents, and keep critical power and infrastructure work moving through a controlled approval process.
           </p>
           <div className="hero-actions">
             <a className="primary-action" href="#access">
@@ -5213,6 +5504,11 @@ function App() {
               Portal Login <LockKeyhole size={18} />
             </a>
           </div>
+          <div className="trust-strip" aria-label="Portal capabilities">
+            <span>Approval-gated</span>
+            <span>Project intake</span>
+            <span>Vendor coordination</span>
+          </div>
         </div>
 
         <aside className="login-panel" id="login" aria-label="Portal login">
@@ -5220,7 +5516,7 @@ function App() {
             <LockKeyhole size={20} />
             <div>
               <h2>{session ? 'Portal Session' : 'Portal Login'}</h2>
-              <p>{session ? session.user.email : 'Sign in or request a new account.'}</p>
+              <p>{session ? session.user.email : 'Approved users can sign in here. New users should request access first.'}</p>
             </div>
           </div>
 
@@ -5313,6 +5609,14 @@ function App() {
             </div>
           )}
         </aside>
+
+        <aside className="hero-media-card" aria-label="AM Premier infrastructure">
+          <img src={proposalMedia} alt="AM Premier charging infrastructure" />
+          <div>
+            <span>Infrastructure ready</span>
+            <strong>Power, EV, generator, and project execution support.</strong>
+          </div>
+        </aside>
       </section>
 
       <section className="metrics-row" aria-label="Portal readiness">
@@ -5328,7 +5632,7 @@ function App() {
       <section className="access-section" id="access-lanes">
         <div className="section-heading">
           <p className="eyebrow">Access lanes</p>
-          <h2>Approval gates now sit in front of AM Premier portal access.</h2>
+          <h2>Built around the way clients, vendors, and internal teams actually move projects forward.</h2>
         </div>
         <div className="lane-grid">
           {accessLanes.map((lane) => {
@@ -5353,7 +5657,7 @@ function App() {
             <ClipboardCheck size={20} />
             <div>
               <h2>New Request Intake</h2>
-              <p>{session ? 'Saved against the active portal session.' : 'Public draft intake remains available.'}</p>
+              <p>{session ? 'Saved against the active portal session.' : 'Share the project need and AM Premier will route it to the right owner.'}</p>
             </div>
           </div>
           <form onSubmit={handleIntakeSave}>
@@ -5397,7 +5701,7 @@ function App() {
             <Zap size={20} />
             <div>
               <h2>{isInternal ? 'Admin Approval Queue' : 'Operating Queue'}</h2>
-              <p>{isInternal ? 'Approve or deny pending portal access requests.' : 'Admin dashboard unlocks for internal users.'}</p>
+              <p>{isInternal ? 'Approve or deny pending portal access requests.' : 'A simple path from request to coordinated execution.'}</p>
             </div>
           </div>
 
@@ -5445,7 +5749,7 @@ function App() {
             <Gauge size={18} />
             <div>
               <strong>Deployment mode</strong>
-              <span>{isInternal ? 'Internal admin controls enabled.' : 'Auth and approval workflow ready.'}</span>
+              <span>{isInternal ? 'Internal admin controls enabled.' : 'Secure portal workflow active.'}</span>
             </div>
           </div>
           {(adminStatus || profileStatus) && (
@@ -5463,7 +5767,7 @@ function App() {
             <MailCheck size={20} />
             <div>
               <h2>Request Portal Approval</h2>
-              <p>Submit the account lane an internal admin should approve.</p>
+              <p>Choose the access lane that matches your role so AM Premier can approve the right portal permissions.</p>
             </div>
           </div>
           <form onSubmit={handleAccessRequest}>

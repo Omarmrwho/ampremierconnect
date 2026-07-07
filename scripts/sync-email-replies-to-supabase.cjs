@@ -151,6 +151,17 @@ function messageSummary(message) {
   ].filter(Boolean).join(' | ')).slice(0, 3500);
 }
 
+function messageReplyFields(message) {
+  const fullBody = bodyText(message).slice(0, 5000);
+  return {
+    reply_body: fullBody || clean(message.bodyPreview || '').slice(0, 1000) || null,
+    reply_preview: clean(message.bodyPreview || '').slice(0, 1000) || null,
+    reply_from: normalizeEmail(message.from?.emailAddress?.address) || null,
+    reply_received_at: message.receivedDateTime || null,
+    reply_message_id: message.id || null,
+  };
+}
+
 function shouldConsider(message) {
   const from = normalizeEmail(message.from?.emailAddress?.address);
   if (!from || internalDomains.has(emailDomain(from))) return false;
@@ -198,6 +209,32 @@ async function ensureProject(supabase, projectName) {
     .single();
   if (error) throw error;
   return data.id;
+}
+
+function stripReplyColumns(value) {
+  const copy = { ...value };
+  delete copy.reply_body;
+  delete copy.reply_preview;
+  delete copy.reply_from;
+  delete copy.reply_received_at;
+  delete copy.reply_message_id;
+  return copy;
+}
+
+function isMissingReplyColumnError(error) {
+  return /reply_(body|preview|from|received_at|message_id)/i.test(`${error?.message || ''} ${error?.details || ''}`);
+}
+
+async function updateCrmRecord(supabase, id, values) {
+  const result = await supabase.from('project_crm_records').update(values).eq('id', id);
+  if (!result.error || !isMissingReplyColumnError(result.error)) return result;
+  return supabase.from('project_crm_records').update(stripReplyColumns(values)).eq('id', id);
+}
+
+async function insertCrmRecord(supabase, values) {
+  const result = await supabase.from('project_crm_records').insert(values).select('id,company_name,email').single();
+  if (!result.error || !isMissingReplyColumnError(result.error)) return result;
+  return supabase.from('project_crm_records').insert(stripReplyColumns(values)).select('id,company_name,email').single();
 }
 
 function findMatch(message, crmRows) {
@@ -296,6 +333,7 @@ async function main() {
         next_step: updatedNotes,
         last_contacted_at: message.receivedDateTime,
         last_contact_subject: message.subject || match.row.last_contact_subject,
+        ...messageReplyFields(message),
         updated_at: new Date().toISOString(),
       },
     });
@@ -305,10 +343,7 @@ async function main() {
   const created = [];
   if (apply) {
     for (const match of matches) {
-      const { error } = await supabase
-        .from('project_crm_records')
-        .update(match.update)
-        .eq('id', match.row.id);
+      const { error } = await updateCrmRecord(supabase, match.row.id, match.update);
       if (error) throw error;
       applied.push({
         crmId: match.row.id,
@@ -341,24 +376,21 @@ async function main() {
           'Response match: unmatched inbox import',
         ].join(' | ');
 
-        const { data, error } = await supabase
-          .from('project_crm_records')
-          .insert({
-            project_id: projectId,
-            company_name: fromName || emailDomain(from) || from,
-            contact_name: fromName || null,
-            email: from,
-            campaign_name: 'Inbox reply import',
-            channel: 'email',
-            last_contacted_at: message.receivedDateTime,
-            last_contact_subject: message.subject || null,
-            stage: 'responded',
-            owner: 'Email Reply Sync',
-            next_step: responseLine,
-            value_estimate: 'Inbox reply requiring triage',
-          })
-          .select('id,company_name,email')
-          .single();
+        const { data, error } = await insertCrmRecord(supabase, {
+          project_id: projectId,
+          company_name: fromName || emailDomain(from) || from,
+          contact_name: fromName || null,
+          email: from,
+          campaign_name: 'Inbox reply import',
+          channel: 'email',
+          last_contacted_at: message.receivedDateTime,
+          last_contact_subject: message.subject || null,
+          ...messageReplyFields(message),
+          stage: 'responded',
+          owner: 'Email Reply Sync',
+          next_step: responseLine,
+          value_estimate: 'Inbox reply requiring triage',
+        });
         if (error) throw error;
         created.push({
           crmId: data.id,

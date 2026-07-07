@@ -79,6 +79,11 @@ create table if not exists public.project_crm_records (
   channel text,
   last_contacted_at timestamptz,
   last_contact_subject text,
+  reply_body text,
+  reply_preview text,
+  reply_from text,
+  reply_received_at timestamptz,
+  reply_message_id text,
   fit_reason text,
   stage text not null default 'qualification',
   owner text,
@@ -100,6 +105,11 @@ alter table public.project_crm_records
   add column if not exists channel text,
   add column if not exists last_contacted_at timestamptz,
   add column if not exists last_contact_subject text,
+  add column if not exists reply_body text,
+  add column if not exists reply_preview text,
+  add column if not exists reply_from text,
+  add column if not exists reply_received_at timestamptz,
+  add column if not exists reply_message_id text,
   add column if not exists fit_reason text;
 
 create table if not exists public.project_tasks (
