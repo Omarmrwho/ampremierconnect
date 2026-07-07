@@ -168,7 +168,7 @@ function messageReplyFields(message) {
 function isCampaignOutbound(message) {
   const from = normalizeEmail(message.from?.emailAddress?.address);
   const text = `${message.subject || ''} ${message.bodyPreview || ''}`;
-  if (from && from !== 'elara@ampremiersolutions.com') return false;
+  if (!from || emailDomain(from) !== 'ampremiersolutions.com') return false;
   if (nonCampaignSignals.test(text)) return false;
   return campaignSignals.test(text);
 }
@@ -336,7 +336,7 @@ async function main() {
   const inbox = await graph(query);
   const messages = (inbox.value || []).filter((message) => message.receivedDateTime >= since).filter(shouldConsider);
   const sentQuery = [
-    `/me/mailFolders/sentitems/messages?$top=200`,
+    `/me/mailFolders/sentitems/messages?$top=500`,
     '$orderby=sentDateTime desc',
     '$select=id,sentDateTime,subject,from,toRecipients,bodyPreview,conversationId,internetMessageId',
   ].join('&');
@@ -346,11 +346,27 @@ async function main() {
   const matches = [];
   const skipped = [];
   const verifiedCampaignReplies = [];
+  const verifiedKeys = new Set();
   for (const message of messages) {
     const match = findMatch(message, crmRows || []);
     if (!match) {
       const verifiedSent = findVerifiedSentCampaign(message, sentCampaignsByRecipient);
       if (verifiedSent) {
+        const key = [
+          normalizeEmail(message.from?.emailAddress?.address),
+          message.conversationId || cleanSubject(message.subject),
+          cleanSubject(verifiedSent.subject),
+        ].join('|');
+        if (verifiedKeys.has(key)) {
+          skipped.push({
+            receivedDateTime: message.receivedDateTime,
+            from: normalizeEmail(message.from?.emailAddress?.address),
+            subject: message.subject || '',
+            reason: 'duplicate verified campaign reply thread',
+          });
+          continue;
+        }
+        verifiedKeys.add(key);
         verifiedCampaignReplies.push({ message, verifiedSent });
         continue;
       }
