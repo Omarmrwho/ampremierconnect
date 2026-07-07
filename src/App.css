@@ -940,6 +940,26 @@ textarea {
   margin-top: 0;
 }
 
+.campaign-list-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.campaign-list-heading h3 {
+  margin: 4px 0 0;
+  color: #10232b;
+  font-size: 22px;
+}
+
+.campaign-list-heading p {
+  margin: 0;
+  color: #65737a;
+  font-weight: 750;
+}
+
 .campaign-workbench .empty-project-state {
   grid-column: 1 / -1;
 }

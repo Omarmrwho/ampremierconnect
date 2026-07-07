@@ -1158,6 +1158,12 @@ function App() {
       }),
     ...campaignActivityRows,
   ].sort((left, right) => right.replyDate.localeCompare(left.replyDate))
+  const campaignMetrics = {
+    total: projectCampaigns.length,
+    active: projectCampaigns.filter((campaign) => campaign.status === 'active').length,
+    planned: projectCampaigns.filter((campaign) => ['draft', 'recommended'].includes(campaign.status)).length,
+    replies: campaignReplyRows.length,
+  }
   const selectedReply = selectedReplyId ? campaignReplyRows.find((reply) => reply.id === selectedReplyId) || null : null
   const selectedCrmReplyRecord =
     selectedCrmRecordId && selectedCrmRecord?.hasResponse ? selectedCrmRecord : null
@@ -3552,23 +3558,46 @@ function App() {
               </button>
             </div>
 
-            <div className="command-metrics" aria-label="Project status summary">
-              <div>
-                <span>Active</span>
-                <strong>{activeProjects}</strong>
-              </div>
-              <div>
-                <span>Waiting</span>
-                <strong>{waitingProjects}</strong>
-              </div>
-              <div>
-                <span>Blocked</span>
-                <strong>{blockedProjects}</strong>
-              </div>
-              <div>
-                <span>Needs Action</span>
-                <strong>{needsActionProjects}</strong>
-              </div>
+            <div className="command-metrics" aria-label={isCampaignsRoute ? 'Campaign summary' : 'Project status summary'}>
+              {isCampaignsRoute ? (
+                <>
+                  <div>
+                    <span>Total Campaigns</span>
+                    <strong>{campaignMetrics.total}</strong>
+                  </div>
+                  <div>
+                    <span>Active Campaigns</span>
+                    <strong>{campaignMetrics.active}</strong>
+                  </div>
+                  <div>
+                    <span>Draft / Recommended</span>
+                    <strong>{campaignMetrics.planned}</strong>
+                  </div>
+                  <div>
+                    <span>Synced Replies</span>
+                    <strong>{campaignMetrics.replies}</strong>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <span>Active</span>
+                    <strong>{activeProjects}</strong>
+                  </div>
+                  <div>
+                    <span>Waiting</span>
+                    <strong>{waitingProjects}</strong>
+                  </div>
+                  <div>
+                    <span>Blocked</span>
+                    <strong>{blockedProjects}</strong>
+                  </div>
+                  <div>
+                    <span>Needs Action</span>
+                    <strong>{needsActionProjects}</strong>
+                  </div>
+                </>
+              )}
             </div>
 
             {isProposalsRoute && (
@@ -4103,6 +4132,13 @@ function App() {
                         </div>
                         {visibleProjectCampaigns.length > 0 ? (
                           <>
+                            <div className="campaign-list-heading">
+                              <div>
+                                <span className="decision-label">Campaign List</span>
+                                <h3>{filteredSelectedProjectCampaigns.length} campaigns visible</h3>
+                              </div>
+                              <p>{isCampaignsRoute ? 'All saved campaigns across every workspace.' : 'Campaigns attached to this workspace.'}</p>
+                            </div>
                             <div className="crm-toolbar campaign-toolbar" aria-label="Campaign filters">
                               <label>
                                 <Filter size={16} />
