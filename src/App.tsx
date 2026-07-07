@@ -2648,6 +2648,37 @@ function App() {
     await loadProjectStatuses()
   }
 
+  const requestCampaignFollowUpWave = async (project: ProjectSessionStatus, wave: 2 | 3) => {
+    const command = `Send wave ${wave} follow-up emails for every outgoing campaign tied to ${project.project_name}. Use only verified project campaign recipients, avoid duplicates, preserve opt-outs/replies, log each send, and update CRM/campaign activity when complete.`
+
+    setProjectStatusMessage(`Saving wave ${wave} follow-up command for ${project.project_name}...`)
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProjectStatusMessage(`Wave ${wave} follow-up command staged. Supabase env vars are not connected yet.`)
+      return
+    }
+
+    const { error } = await supabase
+      .from('project_session_status')
+      .update({
+        status: 'waiting',
+        health: 'yellow',
+        next_action: command,
+        blocker: null,
+        last_update: `Campaign follow-up command from Omar: ${command}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', project.id)
+
+    if (error) {
+      setProjectStatusMessage('Follow-up command could not be saved. Confirm internal update policy is active.')
+      return
+    }
+
+    setProjectStatusMessage(`Wave ${wave} follow-up command saved for ${project.project_name}.`)
+    await loadProjectStatuses()
+  }
+
   const createAgentWorkOrder = async (project: ProjectSessionStatus, workType: string, summary: string) => {
     setProjectStatusMessage(`Creating ${workType} work order for ${project.project_name}...`)
 
@@ -3973,6 +4004,23 @@ function App() {
                             </p>
                           </div>
                         </div>
+                        <div className="followup-command-panel">
+                          <div>
+                            <Megaphone size={19} />
+                            <div>
+                              <strong>Campaign follow-up email wave</strong>
+                              <p>Send a command for the next outreach wave tied to this project&apos;s outgoing campaign mail.</p>
+                            </div>
+                          </div>
+                          <div className="followup-command-actions">
+                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
+                              Send Wave 2
+                            </button>
+                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
+                              Send Wave 3
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -4178,18 +4226,26 @@ function App() {
                             <h3>Marketing and sales campaigns</h3>
                             <p>Turn project movement into outreach, content, launch assets, and sales sequences.</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              createAgentWorkOrder(
-                                selectedActionProject,
-                                'campaign_agent',
-                                'Create a marketing campaign and sales campaign with audience, offer, channels, messages, and execution steps.',
-                              )
-                            }
-                          >
-                            Generate Campaign
-                          </button>
+                          <div className="workspace-section-actions">
+                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
+                              Send Wave 2
+                            </button>
+                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
+                              Send Wave 3
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                createAgentWorkOrder(
+                                  selectedActionProject,
+                                  'campaign_agent',
+                                  'Create a marketing campaign and sales campaign with audience, offer, channels, messages, and execution steps.',
+                                )
+                              }
+                            >
+                              Generate Campaign
+                            </button>
+                          </div>
                         </div>
                         {visibleProjectCampaigns.length > 0 ? (
                           <>
@@ -5391,6 +5447,18 @@ function App() {
                             {replyCount === 1 ? 'Reply' : `${replyCount} Replies`}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          className="project-followup-button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            requestCampaignFollowUpWave(project, 2)
+                          }}
+                          title={`Send wave 2 follow-up command for ${project.project_name}`}
+                        >
+                          <Send size={15} />
+                          Wave 2
+                        </button>
                         <span className={`health-pill ${project.health}`}>
                           {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
                           {project.status}

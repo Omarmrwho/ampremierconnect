@@ -2794,6 +2794,60 @@ textarea {
   white-space: nowrap;
 }
 
+.workspace-section-actions,
+.followup-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.followup-command-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(185, 95, 34, 0.18);
+  border-radius: 8px;
+  background: #fffaf5;
+}
+
+.followup-command-panel > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.followup-command-panel svg {
+  flex: 0 0 auto;
+  color: #b95f22;
+}
+
+.followup-command-panel strong {
+  display: block;
+  color: #10232b;
+}
+
+.followup-command-panel p {
+  margin: 4px 0 0;
+  color: #526168;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.followup-command-actions button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #b95f22;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
 .schedule-list,
 .idea-list {
   display: grid;
@@ -3209,8 +3263,24 @@ textarea {
   background: #e8f7f0;
 }
 
+.project-card-actions .project-followup-button {
+  display: inline-flex;
+  width: auto;
+  min-width: max-content;
+  min-height: 34px;
+  padding: 0 12px;
+  gap: 6px;
+  border-radius: 999px;
+  color: #8a3d13;
+  background: #fff1df;
+}
+
 .project-card-actions .project-reply-indicator:hover {
   background: #d8f1e7;
+}
+
+.project-card-actions .project-followup-button:hover {
+  background: #ffe4c4;
 }
 
 .project-card h3 {
@@ -4006,7 +4076,8 @@ textarea {
   }
 
   .workspace-hero,
-  .workspace-section-head {
+  .workspace-section-head,
+  .followup-command-panel {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -4015,9 +4086,15 @@ textarea {
     min-width: 0;
   }
 
-  .workspace-section-head button {
+  .workspace-section-head button,
+  .followup-command-actions button {
     width: 100%;
     min-height: 44px;
+  }
+
+  .workspace-section-actions,
+  .followup-command-actions {
+    justify-content: stretch;
   }
 
   .workspace-kpi-grid,
