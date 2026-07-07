@@ -751,6 +751,11 @@ const getActionReason = (project: ProjectSessionStatus) => {
   return project.next_action || 'Needs updated next action.'
 }
 
+const hasCampaignFollowUpWaveSent = (project: ProjectSessionStatus, wave: 2 | 3) => {
+  const statusText = `${project.last_update || ''} ${project.next_action || ''}`.toLowerCase()
+  return statusText.includes(`wave ${wave} follow-up sent`) || statusText.includes(`wave ${wave} follow-up complete`)
+}
+
 const getProjectProgress = (project: ProjectSessionStatus) => {
   if (project.status === 'complete') {
     return { value: 100, label: 'Complete' }
@@ -4013,12 +4018,18 @@ function App() {
                             </div>
                           </div>
                           <div className="followup-command-actions">
-                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
-                              Send Wave 2
-                            </button>
-                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
-                              Send Wave 3
-                            </button>
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 2) && (
+                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
+                                Send Wave 2
+                              </button>
+                            )}
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 3) && (
+                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
+                                Send Wave 3
+                              </button>
+                            )}
+                            {hasCampaignFollowUpWaveSent(selectedActionProject, 2) &&
+                              hasCampaignFollowUpWaveSent(selectedActionProject, 3) && <span>All follow-up waves sent</span>}
                           </div>
                         </div>
                       </div>
@@ -4227,12 +4238,16 @@ function App() {
                             <p>Turn project movement into outreach, content, launch assets, and sales sequences.</p>
                           </div>
                           <div className="workspace-section-actions">
-                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
-                              Send Wave 2
-                            </button>
-                            <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
-                              Send Wave 3
-                            </button>
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 2) && (
+                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
+                                Send Wave 2
+                              </button>
+                            )}
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 3) && (
+                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
+                                Send Wave 3
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() =>
@@ -5447,18 +5462,20 @@ function App() {
                             {replyCount === 1 ? 'Reply' : `${replyCount} Replies`}
                           </button>
                         )}
-                        <button
-                          type="button"
-                          className="project-followup-button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            requestCampaignFollowUpWave(project, 2)
-                          }}
-                          title={`Send wave 2 follow-up command for ${project.project_name}`}
-                        >
-                          <Send size={15} />
-                          Wave 2
-                        </button>
+                        {!hasCampaignFollowUpWaveSent(project, 2) && (
+                          <button
+                            type="button"
+                            className="project-followup-button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              requestCampaignFollowUpWave(project, 2)
+                            }}
+                            title={`Send wave 2 follow-up command for ${project.project_name}`}
+                          >
+                            <Send size={15} />
+                            Wave 2
+                          </button>
+                        )}
                         <span className={`health-pill ${project.health}`}>
                           {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
                           {project.status}
@@ -5530,24 +5547,31 @@ function App() {
                         <strong>Send next email wave</strong>
                       </div>
                       <div>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            requestCampaignFollowUpWave(project, 2)
-                          }}
-                        >
-                          Wave 2
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            requestCampaignFollowUpWave(project, 3)
-                          }}
-                        >
-                          Wave 3
-                        </button>
+                        {!hasCampaignFollowUpWaveSent(project, 2) && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              requestCampaignFollowUpWave(project, 2)
+                            }}
+                          >
+                            Wave 2
+                          </button>
+                        )}
+                        {!hasCampaignFollowUpWaveSent(project, 3) && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              requestCampaignFollowUpWave(project, 3)
+                            }}
+                          >
+                            Wave 3
+                          </button>
+                        )}
+                        {hasCampaignFollowUpWaveSent(project, 2) && hasCampaignFollowUpWaveSent(project, 3) && (
+                          <span>All waves sent</span>
+                        )}
                       </div>
                     </div>
                     <div className="project-updated">
