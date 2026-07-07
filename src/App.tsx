@@ -5524,6 +5524,32 @@ function App() {
                         </div>
                       )}
                     </dl>
+                    <div className="project-followup-panel" aria-label={`${project.project_name} campaign follow-up commands`}>
+                      <div>
+                        <span>Campaign follow-up</span>
+                        <strong>Send next email wave</strong>
+                      </div>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            requestCampaignFollowUpWave(project, 2)
+                          }}
+                        >
+                          Wave 2
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            requestCampaignFollowUpWave(project, 3)
+                          }}
+                        >
+                          Wave 3
+                        </button>
+                      </div>
+                    </div>
                     <div className="project-updated">
                       <Clock3 size={15} />
                       <span>Synced {new Date(project.updated_at).toLocaleString()}</span>
