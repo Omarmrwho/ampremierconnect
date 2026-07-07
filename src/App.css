@@ -931,6 +931,15 @@ textarea {
   align-items: start;
 }
 
+.campaign-route-drawer {
+  margin-top: 18px;
+  padding-top: 0;
+}
+
+.campaign-route-drawer .workspace-command-center {
+  margin-top: 0;
+}
+
 .campaign-workbench .empty-project-state {
   grid-column: 1 / -1;
 }
@@ -1507,7 +1516,8 @@ textarea {
 }
 
 .campaign-reply-table-wrap {
-  overflow-x: auto;
+  max-height: 360px;
+  overflow: auto;
   border: 1px solid rgba(19, 60, 79, 0.1);
   border-radius: 8px;
   background: #ffffff;
@@ -1534,8 +1544,10 @@ textarea {
 }
 
 .campaign-reply-table th:nth-child(1),
-.campaign-reply-table td:nth-child(1) {
-  width: 18%;
+.campaign-reply-table td:nth-child(1),
+.campaign-reply-table th:nth-child(3),
+.campaign-reply-table td:nth-child(3) {
+  width: 22%;
 }
 
 .campaign-reply-table th:nth-child(2),
@@ -1543,17 +1555,13 @@ textarea {
   width: 18%;
 }
 
-.campaign-reply-table th:nth-child(3),
-.campaign-reply-table td:nth-child(3),
 .campaign-reply-table th:nth-child(4),
 .campaign-reply-table td:nth-child(4) {
-  width: 22%;
+  width: 28%;
 }
 
 .campaign-reply-table th:nth-child(5),
-.campaign-reply-table td:nth-child(5),
-.campaign-reply-table th:nth-child(6),
-.campaign-reply-table td:nth-child(6) {
+.campaign-reply-table td:nth-child(5) {
   width: 10%;
 }
 
@@ -1696,7 +1704,9 @@ textarea {
 }
 
 .reply-body-card p {
+  max-height: 260px;
   margin: 0;
+  overflow: auto;
   color: #26373f;
   font-size: 14px;
   line-height: 1.55;

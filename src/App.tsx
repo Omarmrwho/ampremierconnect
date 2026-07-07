@@ -1032,6 +1032,7 @@ function App() {
   const selectedProjectCampaigns = selectedActionProject
     ? projectCampaigns.filter((campaign) => campaign.project_id === selectedActionProject.id)
     : []
+  const visibleProjectCampaigns = isCampaignsRoute ? projectCampaigns : selectedProjectCampaigns
   const visibleReplyProjects = selectedActionProject && !isCampaignsRoute ? [selectedActionProject] : operatingProjects
   const visibleReplyProjectIds = new Set(visibleReplyProjects.map((project) => project.id))
   const getProjectName = (projectId: string) =>
@@ -1063,13 +1064,15 @@ function App() {
     }
   }
   const campaignFilterOptions = {
-    statuses: ['all', ...Array.from(new Set(selectedProjectCampaigns.map((campaign) => campaign.status).filter(Boolean))).sort()],
+    statuses: ['all', ...Array.from(new Set(visibleProjectCampaigns.map((campaign) => campaign.status).filter(Boolean))).sort()],
   }
   const campaignSearchText = campaignSearch.trim().toLowerCase()
-  const filteredSelectedProjectCampaigns = selectedProjectCampaigns.filter((campaign) => {
+  const filteredSelectedProjectCampaigns = visibleProjectCampaigns.filter((campaign) => {
     const activitySummary = getCampaignActivitySummary(campaign.id)
+    const projectName = getProjectName(campaign.project_id)
     const matchesSearch = campaignSearchText
       ? [
+      projectName,
       campaign.campaign_name,
       campaign.campaign_type,
       campaign.channel,
@@ -3626,6 +3629,7 @@ function App() {
               </section>
             )}
 
+            {!isCampaignsRoute && (
             <div className="command-board">
               <section className="movement-panel" aria-label="Project movement board">
                 <div className="panel-heading">
@@ -3704,6 +3708,7 @@ function App() {
                 </div>
               </section>
             </div>
+            )}
 
             {isCommandRoute && (
               <section className="command-replies-panel" aria-label="Recent campaign replies">
@@ -3759,7 +3764,8 @@ function App() {
             )}
 
             {selectedActionProject && (
-              <section className="decision-drawer" aria-label="Decision detail" ref={decisionDrawerRef}>
+              <section className={`decision-drawer ${isCampaignsRoute ? 'campaign-route-drawer' : ''}`} aria-label={isCampaignsRoute ? 'Campaign workspace' : 'Decision detail'} ref={decisionDrawerRef}>
+                {!isCampaignsRoute && (
                 <div className="panel-heading">
                   <CircleAlert size={20} />
                   <div>
@@ -3767,6 +3773,8 @@ function App() {
                     <p>Choose how this project should move next.</p>
                   </div>
                 </div>
+                )}
+                {!isCampaignsRoute && (
                 <div className="decision-layout">
                   <div>
                     <span className="decision-label">Project</span>
@@ -3792,8 +3800,10 @@ function App() {
                     </div>
                   </dl>
                 </div>
+                )}
                 {selectedWorkspace && (
                   <div className="workspace-command-center">
+                    {!isCampaignsRoute && (
                     <div className="workspace-hero">
                       <div>
                         <span className="decision-label">Workspace</span>
@@ -3805,14 +3815,15 @@ function App() {
                         <strong>{selectedWorkspace.stage}</strong>
                       </div>
                     </div>
+                    )}
 
                     <div className="workspace-tabs" role="tablist" aria-label="Project workspace sections">
                       {workspaceTabs.map((tab) => (
                         <button
                           type="button"
                           role="tab"
-                          aria-selected={workspaceTab === tab.id}
-                          className={workspaceTab === tab.id ? 'active' : ''}
+                          aria-selected={(isCampaignsRoute ? tab.id === 'campaigns' : workspaceTab === tab.id)}
+                          className={(isCampaignsRoute ? tab.id === 'campaigns' : workspaceTab === tab.id) ? 'active' : ''}
                           key={tab.id}
                           onClick={() => {
                             if (tab.id === 'crm') {
@@ -4069,7 +4080,7 @@ function App() {
                       </div>
                     )}
 
-                    {workspaceTab === 'campaigns' && (
+                    {(workspaceTab === 'campaigns' || isCampaignsRoute) && (
                       <div className="workspace-tab-panel">
                         <div className="workspace-section-head">
                           <div>
@@ -4090,124 +4101,7 @@ function App() {
                             Generate Campaign
                           </button>
                         </div>
-                        <section className="campaign-reply-tracker" aria-label="Campaign email replies">
-                          <div className="campaign-reply-head">
-                            <div>
-	                              <span className="decision-label">Reply Tracker</span>
-	                              <h3>{campaignReplyRows.length} synced campaign replies</h3>
-	                              <p>
-	                                See which email replies have been imported or logged, which workspace and campaign they came from,
-	                                what happened, and the next follow-up.
-	                              </p>
-                            </div>
-                            <div className="campaign-reply-stats" aria-label="Reply counts">
-                              <span>
-                                <strong>{campaignReplyRows.filter((reply) => reply.contactEmail !== 'No email captured in activity').length}</strong>
-                                with email
-                              </span>
-                              <span>
-                                <strong>{campaignReplyRows.filter((reply) => reply.source === 'Campaign activity').length}</strong>
-	                                logged activities
-	                              </span>
-	                              <span>
-	                                <strong>{visibleReplyProjects.length}</strong>
-	                                workspaces
-	                              </span>
-	                            </div>
-	                          </div>
-                          {campaignReplyRows.length > 0 ? (
-                            <div className="campaign-reply-table-wrap">
-                              <table className="campaign-reply-table">
-                                <thead>
-                                  <tr>
-	                                    <th>Email / Contact</th>
-	                                    <th>Workspace</th>
-	                                    <th>Campaign</th>
-	                                    <th>Reply</th>
-                                    <th>Next Step</th>
-                                    <th>Date</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {campaignReplyRows.map((reply) => (
-                                    <tr
-                                      className={selectedReply?.id === reply.id ? 'selected' : ''}
-                                      key={reply.id}
-                                      onClick={() => {
-                                        if (reply.campaignId) {
-                                          setSelectedCampaignId(reply.campaignId)
-                                        }
-                                        setSelectedReplyId(reply.id)
-                                      }}
-                                    >
-                                      <td>
-                                        <strong>{reply.contactEmail}</strong>
-                                        <small>{reply.companyName || reply.contactName || 'Contact not tagged'}</small>
-	                                      </td>
-	                                      <td>
-	                                        <strong>{reply.projectName}</strong>
-	                                        <small>{reply.projectId}</small>
-	                                      </td>
-	                                      <td>
-	                                        <strong>{reply.campaignName}</strong>
-                                        <small>{reply.source}</small>
-                                      </td>
-                                      <td>{reply.outcome}</td>
-                                      <td>{reply.nextStep}</td>
-                                      <td>{reply.replyDate}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-	                            <div className="empty-inline-note">
-	                              No replies are synced into the portal yet. If replies came into the mailbox, import or log them
-	                              into CRM/campaign activity so they appear here with the correct campaign.
-	                            </div>
-                          )}
-                          {selectedReply && (
-                            <aside className="reply-detail-panel" aria-label="Selected reply detail">
-                              <div className="reply-detail-head">
-                                <div>
-                                  <span className="decision-label">{selectedReply.source}</span>
-                                  <h3>{selectedReply.contactEmail}</h3>
-                                  <p>{selectedReply.companyName || selectedReply.contactName || 'Contact not tagged'}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  className="secondary-inline-action"
-                                  onClick={() => setSelectedReplyId(null)}
-                                >
-                                  Clear selection
-                                </button>
-                              </div>
-                              <dl className="reply-detail-meta">
-                                <div>
-                                  <dt>Workspace</dt>
-                                  <dd>{selectedReply.projectName}</dd>
-                                </div>
-                                <div>
-                                  <dt>Campaign</dt>
-                                  <dd>{selectedReply.campaignName}</dd>
-                                </div>
-                                <div>
-                                  <dt>Date</dt>
-                                  <dd>{selectedReply.replyDate}</dd>
-                                </div>
-                              </dl>
-                              <div className="reply-body-card">
-                                <span className="decision-label">Reply Text</span>
-                                <p>{selectedReply.replyBody}</p>
-                              </div>
-                              <div className="reply-body-card muted">
-                                <span className="decision-label">Next Step</span>
-                                <p>{selectedReply.nextStep}</p>
-                              </div>
-                            </aside>
-                          )}
-                        </section>
-                        {selectedProjectCampaigns.length > 0 ? (
+                        {visibleProjectCampaigns.length > 0 ? (
                           <>
                             <div className="crm-toolbar campaign-toolbar" aria-label="Campaign filters">
                               <label>
@@ -4241,7 +4135,7 @@ function App() {
                                 </select>
                               </label>
                               <span>
-                                Showing {filteredSelectedProjectCampaigns.length} of {selectedProjectCampaigns.length}
+                                Showing {filteredSelectedProjectCampaigns.length} of {visibleProjectCampaigns.length}
                               </span>
                             </div>
                             <div className="campaign-workbench">
@@ -4279,7 +4173,7 @@ function App() {
                                             >
                                               <td>
                                                 <strong>{campaign.campaign_name}</strong>
-                                                <small>{campaign.recommendation?.split(/\n/)[0] || 'No audience brief captured.'}</small>
+                                                <small>{getProjectName(campaign.project_id)}</small>
                                               </td>
                                               <td>{campaign.campaign_type}</td>
                                               <td>{campaign.channel || 'Not assigned'}</td>
@@ -4479,6 +4373,119 @@ function App() {
                             ))}
                           </div>
                         )}
+                        <section className="campaign-reply-tracker" aria-label="Campaign email replies">
+                          <div className="campaign-reply-head">
+                            <div>
+                              <span className="decision-label">Reply Tracker</span>
+                              <h3>{campaignReplyRows.length} synced campaign replies</h3>
+                              <p>Click a row to read the full reply in the compact reader below.</p>
+                            </div>
+                            <div className="campaign-reply-stats" aria-label="Reply counts">
+                              <span>
+                                <strong>{campaignReplyRows.filter((reply) => reply.contactEmail !== 'No email captured in activity').length}</strong>
+                                with email
+                              </span>
+                              <span>
+                                <strong>{campaignReplyRows.filter((reply) => reply.source === 'Campaign activity').length}</strong>
+                                logged activities
+                              </span>
+                              <span>
+                                <strong>{visibleReplyProjects.length}</strong>
+                                workspaces
+                              </span>
+                            </div>
+                          </div>
+                          {campaignReplyRows.length > 0 ? (
+                            <div className="campaign-reply-table-wrap">
+                              <table className="campaign-reply-table">
+                                <thead>
+                                  <tr>
+                                    <th>Email / Contact</th>
+                                    <th>Workspace</th>
+                                    <th>Campaign</th>
+                                    <th>Reply Signal</th>
+                                    <th>Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {campaignReplyRows.map((reply) => (
+                                    <tr
+                                      className={selectedReply?.id === reply.id ? 'selected' : ''}
+                                      key={reply.id}
+                                      onClick={() => {
+                                        if (reply.campaignId) {
+                                          setSelectedCampaignId(reply.campaignId)
+                                        }
+                                        setSelectedReplyId(reply.id)
+                                      }}
+                                    >
+                                      <td>
+                                        <strong>{reply.contactEmail}</strong>
+                                        <small>{reply.companyName || reply.contactName || 'Contact not tagged'}</small>
+                                      </td>
+                                      <td>
+                                        <strong>{reply.projectName}</strong>
+                                      </td>
+                                      <td>
+                                        <strong>{reply.campaignName}</strong>
+                                        <small>{reply.source}</small>
+                                      </td>
+                                      <td>
+                                        <strong>{reply.outcome}</strong>
+                                        <small>{reply.nextStep}</small>
+                                      </td>
+                                      <td>{reply.replyDate}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="empty-inline-note">
+                              No replies are synced into the portal yet. If replies came into the mailbox, import or log them into CRM/campaign activity so they appear here with the correct campaign.
+                            </div>
+                          )}
+                          {selectedReply && (
+                            <aside className="reply-detail-panel compact" aria-label="Selected reply detail">
+                              <div className="reply-detail-head">
+                                <div>
+                                  <span className="decision-label">{selectedReply.source}</span>
+                                  <h3>{selectedReply.contactEmail}</h3>
+                                  <p>{selectedReply.companyName || selectedReply.contactName || 'Contact not tagged'}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="secondary-inline-action"
+                                  onClick={() => setSelectedReplyId(null)}
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                              <dl className="reply-detail-meta">
+                                <div>
+                                  <dt>Workspace</dt>
+                                  <dd>{selectedReply.projectName}</dd>
+                                </div>
+                                <div>
+                                  <dt>Campaign</dt>
+                                  <dd>{selectedReply.campaignName}</dd>
+                                </div>
+                                <div>
+                                  <dt>Date</dt>
+                                  <dd>{selectedReply.replyDate}</dd>
+                                </div>
+                              </dl>
+                              <div className="reply-body-card">
+                                <span className="decision-label">Reply Text</span>
+                                <p>{selectedReply.replyBody}</p>
+                              </div>
+                              <div className="reply-body-card muted">
+                                <span className="decision-label">Next Step</span>
+                                <p>{selectedReply.nextStep}</p>
+                              </div>
+                            </aside>
+                          )}
+                        </section>
                         <form
                           className="ops-form-grid compact"
                           onSubmit={(event) => createCommandRecord(event, 'project_campaigns')}
