@@ -756,6 +756,20 @@ const hasCampaignFollowUpWaveSent = (project: ProjectSessionStatus, wave: 2 | 3)
   return statusText.includes(`wave ${wave} follow-up sent`) || statusText.includes(`wave ${wave} follow-up complete`)
 }
 
+const getCampaignFollowUpCommandState = (
+  project: ProjectSessionStatus,
+  wave: 2 | 3,
+  followUpWaveStatus: Record<string, { tone: 'loading' | 'success' | 'error'; message: string }>,
+) => {
+  const feedback = followUpWaveStatus[`${project.id}:${wave}`]
+  if (feedback) return feedback
+  const statusText = `${project.last_update || ''} ${project.next_action || ''}`.toLowerCase()
+  if (statusText.includes(`send wave ${wave} follow-up emails`) || statusText.includes(`send wave ${wave} follow-up command`)) {
+    return { tone: 'success' as const, message: `Wave ${wave} is queued. It will disappear after the send is completed and logged.` }
+  }
+  return null
+}
+
 const getProjectProgress = (project: ProjectSessionStatus) => {
   if (project.status === 'complete') {
     return { value: 100, label: 'Complete' }
@@ -917,6 +931,7 @@ function App() {
   const [adminStatus, setAdminStatus] = useState('')
   const [projectStatuses, setProjectStatuses] = useState<ProjectSessionStatus[]>([])
   const [projectStatusMessage, setProjectStatusMessage] = useState('')
+  const [followUpWaveStatus, setFollowUpWaveStatus] = useState<Record<string, { tone: 'loading' | 'success' | 'error'; message: string }>>({})
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('command')
@@ -983,6 +998,13 @@ function App() {
   const selectedWorkspace = selectedActionProject
     ? projectWorkspaces[selectedActionProject.project_name] || defaultWorkspace
     : null
+  const selectedWave2CommandState = selectedActionProject
+    ? getCampaignFollowUpCommandState(selectedActionProject, 2, followUpWaveStatus)
+    : null
+  const selectedWave3CommandState = selectedActionProject
+    ? getCampaignFollowUpCommandState(selectedActionProject, 3, followUpWaveStatus)
+    : null
+  const selectedFollowUpCommandState = selectedWave3CommandState || selectedWave2CommandState
   const selectedProjectTasks = selectedActionProject
     ? projectTasks.filter((task) => task.project_id === selectedActionProject.id)
     : []
@@ -2654,12 +2676,19 @@ function App() {
   }
 
   const requestCampaignFollowUpWave = async (project: ProjectSessionStatus, wave: 2 | 3) => {
+    const feedbackKey = `${project.id}:${wave}`
     const command = `Send wave ${wave} follow-up emails for every outgoing campaign tied to ${project.project_name}. Use only verified project campaign recipients, avoid duplicates, preserve opt-outs/replies, log each send, and update CRM/campaign activity when complete.`
 
-    setProjectStatusMessage(`Saving wave ${wave} follow-up command for ${project.project_name}...`)
+    setFollowUpWaveStatus((current) => ({
+      ...current,
+      [feedbackKey]: { tone: 'loading', message: `Queuing Wave ${wave} for ${project.project_name}...` },
+    }))
+    setProjectStatusMessage(`Queuing wave ${wave} follow-up command for ${project.project_name}...`)
 
     if (!isSupabaseConfigured || !supabase) {
-      setProjectStatusMessage(`Wave ${wave} follow-up command staged. Supabase env vars are not connected yet.`)
+      const message = `Wave ${wave} command staged locally. Supabase is not connected.`
+      setFollowUpWaveStatus((current) => ({ ...current, [feedbackKey]: { tone: 'error', message } }))
+      setProjectStatusMessage(message)
       return
     }
 
@@ -2676,11 +2705,15 @@ function App() {
       .eq('id', project.id)
 
     if (error) {
-      setProjectStatusMessage('Follow-up command could not be saved. Confirm internal update policy is active.')
+      const message = 'Follow-up command could not be saved. Confirm internal update policy is active.'
+      setFollowUpWaveStatus((current) => ({ ...current, [feedbackKey]: { tone: 'error', message } }))
+      setProjectStatusMessage(message)
       return
     }
 
-    setProjectStatusMessage(`Wave ${wave} follow-up command saved for ${project.project_name}.`)
+    const message = `Wave ${wave} queued for ${project.project_name}. It will disappear after the send is completed and logged.`
+    setFollowUpWaveStatus((current) => ({ ...current, [feedbackKey]: { tone: 'success', message } }))
+    setProjectStatusMessage(message)
     await loadProjectStatuses()
   }
 
@@ -4014,23 +4047,38 @@ function App() {
                             <Megaphone size={19} />
                             <div>
                               <strong>Campaign follow-up email wave</strong>
-                              <p>Send a command for the next outreach wave tied to this project&apos;s outgoing campaign mail.</p>
+                              <p>Queue the next outreach wave. The button disappears only after the send is completed and logged.</p>
                             </div>
                           </div>
                           <div className="followup-command-actions">
-                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 2) && (
-                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
-                                Send Wave 2
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 2) &&
+                              selectedWave2CommandState?.tone !== 'success' && (
+                              <button
+                                type="button"
+                                disabled={selectedWave2CommandState?.tone === 'loading'}
+                                onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}
+                              >
+                                {selectedWave2CommandState?.tone === 'loading' ? 'Queuing Wave 2...' : 'Queue Wave 2'}
                               </button>
                             )}
-                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 3) && (
-                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
-                                Send Wave 3
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 3) &&
+                              selectedWave3CommandState?.tone !== 'success' && (
+                              <button
+                                type="button"
+                                disabled={selectedWave3CommandState?.tone === 'loading'}
+                                onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}
+                              >
+                                {selectedWave3CommandState?.tone === 'loading' ? 'Queuing Wave 3...' : 'Queue Wave 3'}
                               </button>
                             )}
                             {hasCampaignFollowUpWaveSent(selectedActionProject, 2) &&
                               hasCampaignFollowUpWaveSent(selectedActionProject, 3) && <span>All follow-up waves sent</span>}
                           </div>
+                          {selectedFollowUpCommandState && (
+                            <p className={`wave-command-status ${selectedFollowUpCommandState.tone}`} role="status">
+                              {selectedFollowUpCommandState.message}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
@@ -4238,14 +4286,24 @@ function App() {
                             <p>Turn project movement into outreach, content, launch assets, and sales sequences.</p>
                           </div>
                           <div className="workspace-section-actions">
-                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 2) && (
-                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}>
-                                Send Wave 2
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 2) &&
+                              selectedWave2CommandState?.tone !== 'success' && (
+                              <button
+                                type="button"
+                                disabled={selectedWave2CommandState?.tone === 'loading'}
+                                onClick={() => requestCampaignFollowUpWave(selectedActionProject, 2)}
+                              >
+                                {selectedWave2CommandState?.tone === 'loading' ? 'Queuing Wave 2...' : 'Queue Wave 2'}
                               </button>
                             )}
-                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 3) && (
-                              <button type="button" onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}>
-                                Send Wave 3
+                            {!hasCampaignFollowUpWaveSent(selectedActionProject, 3) &&
+                              selectedWave3CommandState?.tone !== 'success' && (
+                              <button
+                                type="button"
+                                disabled={selectedWave3CommandState?.tone === 'loading'}
+                                onClick={() => requestCampaignFollowUpWave(selectedActionProject, 3)}
+                              >
+                                {selectedWave3CommandState?.tone === 'loading' ? 'Queuing Wave 3...' : 'Queue Wave 3'}
                               </button>
                             )}
                             <button
@@ -5435,6 +5493,9 @@ function App() {
                 filteredProjects.map((project) => {
                   const progress = getProjectProgress(project)
                   const replyCount = projectReplyCounts.get(project.id) || 0
+                  const wave2CommandState = getCampaignFollowUpCommandState(project, 2, followUpWaveStatus)
+                  const wave3CommandState = getCampaignFollowUpCommandState(project, 3, followUpWaveStatus)
+                  const followUpCommandState = wave3CommandState || wave2CommandState
 
                   return (
                   <article
@@ -5462,10 +5523,11 @@ function App() {
                             {replyCount === 1 ? 'Reply' : `${replyCount} Replies`}
                           </button>
                         )}
-                        {!hasCampaignFollowUpWaveSent(project, 2) && (
+                        {!hasCampaignFollowUpWaveSent(project, 2) && wave2CommandState?.tone !== 'success' && (
                           <button
                             type="button"
                             className="project-followup-button"
+                            disabled={wave2CommandState?.tone === 'loading'}
                             onClick={(event) => {
                               event.stopPropagation()
                               requestCampaignFollowUpWave(project, 2)
@@ -5473,7 +5535,7 @@ function App() {
                             title={`Send wave 2 follow-up command for ${project.project_name}`}
                           >
                             <Send size={15} />
-                            Wave 2
+                            {wave2CommandState?.tone === 'loading' ? 'Queuing' : 'Wave 2'}
                           </button>
                         )}
                         <span className={`health-pill ${project.health}`}>
@@ -5544,35 +5606,42 @@ function App() {
                     <div className="project-followup-panel" aria-label={`${project.project_name} campaign follow-up commands`}>
                       <div>
                         <span>Campaign follow-up</span>
-                        <strong>Send next email wave</strong>
+                        <strong>Queue next email wave</strong>
                       </div>
                       <div>
-                        {!hasCampaignFollowUpWaveSent(project, 2) && (
+                        {!hasCampaignFollowUpWaveSent(project, 2) && wave2CommandState?.tone !== 'success' && (
                           <button
                             type="button"
+                            disabled={wave2CommandState?.tone === 'loading'}
                             onClick={(event) => {
                               event.stopPropagation()
                               requestCampaignFollowUpWave(project, 2)
                             }}
                           >
-                            Wave 2
+                            {wave2CommandState?.tone === 'loading' ? 'Queuing...' : 'Wave 2'}
                           </button>
                         )}
-                        {!hasCampaignFollowUpWaveSent(project, 3) && (
+                        {!hasCampaignFollowUpWaveSent(project, 3) && wave3CommandState?.tone !== 'success' && (
                           <button
                             type="button"
+                            disabled={wave3CommandState?.tone === 'loading'}
                             onClick={(event) => {
                               event.stopPropagation()
                               requestCampaignFollowUpWave(project, 3)
                             }}
                           >
-                            Wave 3
+                            {wave3CommandState?.tone === 'loading' ? 'Queuing...' : 'Wave 3'}
                           </button>
                         )}
                         {hasCampaignFollowUpWaveSent(project, 2) && hasCampaignFollowUpWaveSent(project, 3) && (
                           <span>All waves sent</span>
                         )}
                       </div>
+                      {followUpCommandState && (
+                        <p className={`wave-command-status ${followUpCommandState.tone}`} role="status">
+                          {followUpCommandState.message}
+                        </p>
+                      )}
                     </div>
                     <div className="project-updated">
                       <Clock3 size={15} />

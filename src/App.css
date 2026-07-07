@@ -2804,6 +2804,7 @@ textarea {
 
 .followup-command-panel {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -2846,6 +2847,38 @@ textarea {
   background: #b95f22;
   font-weight: 850;
   white-space: nowrap;
+}
+
+.followup-command-actions button:disabled,
+.project-card-actions .project-followup-button:disabled,
+.project-followup-panel button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.wave-command-status {
+  flex-basis: 100%;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.wave-command-status.loading {
+  color: #74400c;
+  background: #fff3dc;
+}
+
+.wave-command-status.success {
+  color: #145135;
+  background: #e8f7ef;
+}
+
+.wave-command-status.error {
+  color: #8b1f1f;
+  background: #fff0f0;
 }
 
 .schedule-list,
@@ -3285,6 +3318,7 @@ textarea {
 
 .project-followup-panel {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
