@@ -23,6 +23,8 @@ const ignoredDomains = new Set([
 ]);
 const automatedLocals = /^(mailer-daemon|postmaster|no-reply|noreply|donotreply|do-not-reply|bounce|notification|notifications)$/i;
 const replySignals = /\b(re|fw|fwd|interested|available|schedule|meeting|call|quote|pricing|send|thanks|thank you|not interested|unsubscribe|remove|stop|no thanks|bounce|undeliverable|delivery|failed)\b/i;
+const campaignSignals = /\b(solar|storage|ev|charging|charger|dc fast|level 3|generator|generators|turbine|turbines|critical power|backup power|capacity|airport|fbo|retail|commercial propert|healthcare|campus|cold chain|refrigerated|transit|roofing|lead recovery)\b/i;
+const nonCampaignSignals = /\b(jnk project|dap|1x40|payroll|aws contract|construction agreement|legal|vercel|source package|phone elara|dashboard|linkedin|instagram|cPanel|appointment)\b/i;
 
 function readText(file) {
   return fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '').trim();
@@ -163,12 +165,52 @@ function messageReplyFields(message) {
   };
 }
 
+function isCampaignOutbound(message) {
+  const from = normalizeEmail(message.from?.emailAddress?.address);
+  const text = `${message.subject || ''} ${message.bodyPreview || ''}`;
+  if (from && from !== 'elara@ampremiersolutions.com') return false;
+  if (nonCampaignSignals.test(text)) return false;
+  return campaignSignals.test(text);
+}
+
+function buildSentCampaignMatches(sentMessages) {
+  const byRecipient = new Map();
+  for (const message of sentMessages || []) {
+    if (!isCampaignOutbound(message)) continue;
+    for (const recipient of message.toRecipients || []) {
+      const email = normalizeEmail(recipient.emailAddress?.address);
+      if (!email || internalDomains.has(emailDomain(email)) || ignoredDomains.has(emailDomain(email))) continue;
+      const list = byRecipient.get(email) || [];
+      list.push(message);
+      byRecipient.set(email, list);
+    }
+  }
+  return byRecipient;
+}
+
+function findVerifiedSentCampaign(message, sentCampaignsByRecipient) {
+  const from = normalizeEmail(message.from?.emailAddress?.address);
+  const receivedAt = Date.parse(message.receivedDateTime || '');
+  if (!from || !Number.isFinite(receivedAt)) return null;
+
+  const sentMessages = sentCampaignsByRecipient.get(from) || [];
+  return sentMessages.find((sent) => {
+    const sentAt = Date.parse(sent.sentDateTime || sent.receivedDateTime || '');
+    if (!Number.isFinite(sentAt) || receivedAt + 60 * 60 * 1000 < sentAt) return false;
+    return sent.conversationId === message.conversationId || cleanSubject(sent.subject) === cleanSubject(message.subject);
+  }) || null;
+}
+
 function shouldConsider(message) {
   const from = normalizeEmail(message.from?.emailAddress?.address);
   if (!from || internalDomains.has(emailDomain(from))) return false;
   if (ignoredDomains.has(emailDomain(from))) return false;
   if (automatedLocals.test(emailLocal(from))) return true;
   return replySignals.test(`${message.subject || ''} ${message.bodyPreview || ''}`);
+}
+
+function cleanSubject(value) {
+  return clean(value).replace(/^(re|fw|fwd):\s*/ig, '').toLowerCase();
 }
 
 function isBusinessReply(message) {
@@ -293,17 +335,31 @@ async function main() {
   ].join('&');
   const inbox = await graph(query);
   const messages = (inbox.value || []).filter((message) => message.receivedDateTime >= since).filter(shouldConsider);
+  const sentQuery = [
+    `/me/mailFolders/sentitems/messages?$top=200`,
+    '$orderby=sentDateTime desc',
+    '$select=id,sentDateTime,subject,from,toRecipients,bodyPreview,conversationId,internetMessageId',
+  ].join('&');
+  const sent = await graph(sentQuery);
+  const sentCampaignsByRecipient = buildSentCampaignMatches(sent.value || []);
 
   const matches = [];
   const skipped = [];
+  const verifiedCampaignReplies = [];
   for (const message of messages) {
     const match = findMatch(message, crmRows || []);
     if (!match) {
+      const verifiedSent = findVerifiedSentCampaign(message, sentCampaignsByRecipient);
+      if (verifiedSent) {
+        verifiedCampaignReplies.push({ message, verifiedSent });
+        continue;
+      }
+
       skipped.push({
         receivedDateTime: message.receivedDateTime,
         from: normalizeEmail(message.from?.emailAddress?.address),
         subject: message.subject || '',
-        reason: 'no CRM email/domain match',
+        reason: 'no CRM campaign match or verified sent campaign',
         importable: isBusinessReply(message),
       });
       continue;
@@ -357,6 +413,46 @@ async function main() {
         from: normalizeEmail(match.message.from?.emailAddress?.address),
         subject: match.message.subject || '',
         confidence: match.confidence,
+      });
+    }
+
+    for (const { message, verifiedSent } of verifiedCampaignReplies) {
+      const projectName = projectNameForMessage(message);
+      const projectId = await ensureProject(supabase, projectName);
+      const from = normalizeEmail(message.from?.emailAddress?.address);
+      const fromName = clean(message.from?.emailAddress?.name);
+      const responseLine = [
+        `Response: ${messageSummary(message)}`,
+        `Response from: ${from}`,
+        `Response date: ${message.receivedDateTime.slice(0, 10)}`,
+        `Graph message id: ${message.id}`,
+        `Response match: verified sent campaign to recipient`,
+        `Sent campaign subject: ${verifiedSent.subject || '(no subject)'}`,
+      ].join(' | ');
+
+      const { data, error } = await insertCrmRecord(supabase, {
+        project_id: projectId,
+        company_name: fromName || emailDomain(from) || from,
+        contact_name: fromName || null,
+        email: from,
+        campaign_name: `Verified campaign reply: ${cleanSubject(verifiedSent.subject || message.subject || 'outreach')}`.slice(0, 160),
+        channel: 'email',
+        last_contacted_at: message.receivedDateTime,
+        last_contact_subject: message.subject || verifiedSent.subject || null,
+        ...messageReplyFields(message),
+        stage: 'responded',
+        owner: 'Verified Email Reply Sync',
+        next_step: responseLine,
+        value_estimate: 'Verified campaign reply requiring triage',
+      });
+      if (error) throw error;
+      created.push({
+        crmId: data.id,
+        company: data.company_name,
+        from,
+        subject: message.subject || '',
+        projectName,
+        confidence: 'verified-sent-campaign',
       });
     }
 
@@ -423,6 +519,7 @@ async function main() {
     scanned: inbox.value?.length || 0,
     considered: messages.length,
     matched: matches.length,
+    verifiedCampaignReplies: verifiedCampaignReplies.length,
     applied: applied.length,
     created: created.length,
     matches: matches.map((match) => ({
@@ -435,6 +532,13 @@ async function main() {
       confidence: match.confidence,
     })),
     createdRows: created,
+    verifiedRows: verifiedCampaignReplies.map(({ message, verifiedSent }) => ({
+      receivedDateTime: message.receivedDateTime,
+      from: normalizeEmail(message.from?.emailAddress?.address),
+      subject: message.subject || '',
+      sentSubject: verifiedSent.subject || '',
+      sentDateTime: verifiedSent.sentDateTime || '',
+    })),
     skipped: skipped.slice(0, 20),
   }, null, 2));
 }
