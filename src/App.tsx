@@ -1158,6 +1158,15 @@ function App() {
       }),
     ...campaignActivityRows,
   ].sort((left, right) => right.replyDate.localeCompare(left.replyDate))
+  const projectReplyCounts = new Map<string, number>()
+  responseCrmRecords.forEach((record) => {
+    projectReplyCounts.set(record.project_id, (projectReplyCounts.get(record.project_id) || 0) + 1)
+  })
+  projectCampaignActivities
+    .filter((activity) => hasResponseSignal(activity.activity_type, activity.outcome, activity.next_step))
+    .forEach((activity) => {
+      projectReplyCounts.set(activity.project_id, (projectReplyCounts.get(activity.project_id) || 0) + 1)
+    })
   const campaignMetrics = {
     total: projectCampaigns.length,
     active: projectCampaigns.filter((campaign) => campaign.status === 'active').length,
@@ -5294,6 +5303,7 @@ function App() {
               ) : (
                 filteredProjects.map((project) => {
                   const progress = getProjectProgress(project)
+                  const replyCount = projectReplyCounts.get(project.id) || 0
 
                   return (
                   <article
@@ -5307,6 +5317,15 @@ function App() {
                         <p>{project.client_name || 'Internal project'}</p>
                       </div>
                       <div className="project-card-actions">
+                        {replyCount > 0 && (
+                          <span
+                            className="project-reply-indicator"
+                            title={`${replyCount} synced campaign ${replyCount === 1 ? 'reply' : 'replies'}`}
+                          >
+                            <MailCheck size={15} />
+                            {replyCount === 1 ? 'Reply' : `${replyCount} Replies`}
+                          </span>
+                        )}
                         <span className={`health-pill ${project.health}`}>
                           {project.health === 'green' ? <CircleCheck size={15} /> : <CircleAlert size={15} />}
                           {project.status}

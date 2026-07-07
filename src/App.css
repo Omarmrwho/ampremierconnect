@@ -3153,6 +3153,20 @@ textarea {
   gap: 7px;
 }
 
+.project-reply-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #e8f7f0;
+  color: #0f6b4a;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .project-card-actions button {
   display: inline-grid;
   width: 34px;
