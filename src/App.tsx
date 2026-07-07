@@ -5161,7 +5161,7 @@ function App() {
                     )}
                   </div>
                 )}
-                {selectedProjectStats ? (
+                {!isCampaignsRoute && selectedProjectStats ? (
                   <div className="project-stats-panel">
                     <div>
                       <span className="decision-label">Stats</span>
@@ -5192,73 +5192,79 @@ function App() {
                       ))}
                     </ul>
                   </div>
-                ) : (
+                ) : !isCampaignsRoute ? (
                   <div className="project-stats-empty">
                     <span className="decision-label">Stats</span>
                     <p>Detailed numbers are not connected to this project yet. Use a custom command to request a stats buildout.</p>
                   </div>
+                ) : null}
+                {!isCampaignsRoute && (
+                  <>
+                    <div className="decision-actions">
+                      <button
+                        type="button"
+                        className="decision-primary"
+                        onClick={() => updateProjectOperatingStatus(selectedActionProject, 'active')}
+                      >
+                        Approve / Move Active
+                      </button>
+                      <button type="button" className="decision-forward" onClick={() => advanceProjectPhase(selectedActionProject)}>
+                        Next / Follow Up
+                      </button>
+                      <button type="button" className="decision-update" onClick={() => requestProjectUpdate(selectedActionProject)}>
+                        Ask Elara for Update
+                      </button>
+                      <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'waiting')}>
+                        Keep Waiting
+                      </button>
+                      <button
+                        type="button"
+                        className="decision-complete"
+                        onClick={() => updateProjectOperatingStatus(selectedActionProject, 'complete')}
+                      >
+                        Mark Done
+                      </button>
+                    </div>
+                    <div className="custom-decision-box">
+                      <label>
+                        Custom command
+                        <textarea
+                          onChange={(event) => setCustomDecision(event.target.value)}
+                          placeholder="Example: Have Elara research the storefront options and recommend one before we move GFY forward."
+                          value={customDecision}
+                        />
+                      </label>
+                      <button type="button" onClick={() => saveCustomDecision(selectedActionProject)}>
+                        Save Custom Command
+                      </button>
+                    </div>
+                  </>
                 )}
-                <div className="decision-actions">
-                  <button
-                    type="button"
-                    className="decision-primary"
-                    onClick={() => updateProjectOperatingStatus(selectedActionProject, 'active')}
-                  >
-                    Approve / Move Active
-                  </button>
-                  <button type="button" className="decision-forward" onClick={() => advanceProjectPhase(selectedActionProject)}>
-                    Next / Follow Up
-                  </button>
-                  <button type="button" className="decision-update" onClick={() => requestProjectUpdate(selectedActionProject)}>
-                    Ask Elara for Update
-                  </button>
-                  <button type="button" onClick={() => updateProjectOperatingStatus(selectedActionProject, 'waiting')}>
-                    Keep Waiting
-                  </button>
-                  <button
-                    type="button"
-                    className="decision-complete"
-                    onClick={() => updateProjectOperatingStatus(selectedActionProject, 'complete')}
-                  >
-                    Mark Done
-                  </button>
-                </div>
-                <div className="custom-decision-box">
-                  <label>
-                    Custom command
-                    <textarea
-                      onChange={(event) => setCustomDecision(event.target.value)}
-                      placeholder="Example: Have Elara research the storefront options and recommend one before we move GFY forward."
-                      value={customDecision}
-                    />
-                  </label>
-                  <button type="button" onClick={() => saveCustomDecision(selectedActionProject)}>
-                    Save Custom Command
-                  </button>
-                </div>
               </section>
             )}
 
-            <div className="project-toolbar" aria-label="Project filters">
-              <div>
-                <Filter size={17} />
-                <strong>Projects</strong>
+            {!isCampaignsRoute && (
+              <div className="project-toolbar" aria-label="Project filters">
+                <div>
+                  <Filter size={17} />
+                  <strong>Projects</strong>
+                </div>
+                <div className="filter-tabs" role="tablist" aria-label="Filter project status">
+                  {projectFilters.map((filter) => (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={projectFilter === filter}
+                      className={projectFilter === filter ? 'active' : ''}
+                      key={filter}
+                      onClick={() => setProjectFilter(filter)}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="filter-tabs" role="tablist" aria-label="Filter project status">
-                {projectFilters.map((filter) => (
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={projectFilter === filter}
-                    className={projectFilter === filter ? 'active' : ''}
-                    key={filter}
-                    onClick={() => setProjectFilter(filter)}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
 
             {projectStatusMessage && (
               <div className="success-note" role="status">
@@ -5273,7 +5279,7 @@ function App() {
               </div>
             )}
 
-            {isProposalsRoute && <div className="project-grid">
+            {!isCampaignsRoute && <div className="project-grid">
               {filteredProjects.length === 0 ? (
                 <article className="empty-project-state">
                   <Radio size={22} />
