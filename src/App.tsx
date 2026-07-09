@@ -912,6 +912,97 @@ const getProposalStage = (status: string) =>
 const getProposalProjectName = (proposal: ProjectProposal, projects: ProjectSessionStatus[]) =>
   projects.find((project) => project.id === proposal.project_id)?.project_name || 'Deleted or unknown workspace'
 
+const legalPages = {
+  '/terms': {
+    eyebrow: 'Terms of Service',
+    title: 'AM Premier Connect Terms of Service',
+    summary:
+      'These terms govern access to AM Premier Connect, including portal access, intake forms, project coordination tools, downloads, and business communication workflows.',
+    updated: 'July 9, 2026',
+    sections: [
+      {
+        title: 'Use of AM Premier Connect',
+        body: 'AM Premier Connect is operated by AM Premier Solutions for business inquiries, client coordination, vendor coordination, project intake, internal review, and related communication workflows. You may use the site only for lawful business purposes and in accordance with these terms.',
+      },
+      {
+        title: 'Portal Accounts',
+        body: 'Portal access may require account creation and admin approval. You are responsible for keeping your login information confidential and for activity under your account. AM Premier may approve, deny, suspend, or remove access when needed to protect the portal, users, projects, or business records.',
+      },
+      {
+        title: 'Submissions and Project Information',
+        body: 'When you submit intake forms, comments, documents, requests, or other information, you confirm that you have the right to provide that information. AM Premier may use submitted information to evaluate requests, coordinate services, manage projects, prepare responses, and maintain business records.',
+      },
+      {
+        title: 'TikTok and Social Automation Workflows',
+        body: 'AM Premier Connect may support approval-first social media workflows, including webhook-based event intake and review tools. These workflows are intended to help review and route events before any response action is taken. No public posting or reply should be treated as guaranteed, automatic, or approved unless expressly confirmed by an authorized AM Premier representative.',
+      },
+      {
+        title: 'No Professional Advice',
+        body: 'Information on this site is for business coordination and operational support. It is not legal, financial, tax, engineering, or professional advice. Any project, pricing, installation, compliance, or contract decision remains subject to separate review, written agreement, and applicable professional guidance.',
+      },
+      {
+        title: 'Third-Party Services',
+        body: 'The site may connect to services such as hosting providers, workflow automation tools, authentication providers, email systems, social platforms, and analytics or support tools. Those services may have their own terms and policies.',
+      },
+      {
+        title: 'Availability and Changes',
+        body: 'AM Premier may update, suspend, change, or discontinue parts of the site or portal at any time. We may also update these terms by posting a revised version on this page.',
+      },
+      {
+        title: 'Contact',
+        body: 'Questions about these terms can be sent to info@ampremiersolutions.com.',
+      },
+    ],
+  },
+  '/privacy': {
+    eyebrow: 'Privacy Policy',
+    title: 'AM Premier Connect Privacy Policy',
+    summary:
+      'This policy explains how AM Premier Connect collects, uses, and protects information submitted through the website, portal, intake forms, and connected workflows.',
+    updated: 'July 9, 2026',
+    sections: [
+      {
+        title: 'Information We Collect',
+        body: 'We may collect information you provide directly, including name, email address, company, role, project details, intake submissions, support requests, portal access requests, files, comments, and business communications. We may also collect technical information such as device, browser, page, form, and security log data.',
+      },
+      {
+        title: 'How We Use Information',
+        body: 'We use information to operate AM Premier Connect, review access requests, respond to business inquiries, manage projects, coordinate vendor or client communications, improve workflows, maintain security, prepare proposals or follow-ups, and comply with legal or operational obligations.',
+      },
+      {
+        title: 'TikTok Webhooks and Social Event Data',
+        body: 'If connected, TikTok or other social platforms may send event data to AM Premier workflows through approved webhook or API connections. That data may be used to review comment-related events, route them for approval, prepare draft responses, and maintain operational records. Public responses are intended to remain subject to review and authorization.',
+      },
+      {
+        title: 'Sharing of Information',
+        body: 'We do not sell personal information. We may share information with service providers that help operate the site, portal, hosting, authentication, workflow automation, email, analytics, storage, or support systems. We may also disclose information when required by law, to protect rights and security, or with your direction.',
+      },
+      {
+        title: 'SMS and Mobile Information',
+        body: 'If you provide a mobile number for AM Premier communications, SMS consent and mobile information are not sold, rented, or shared with third parties or affiliates for their marketing or promotional purposes. Message and data rates may apply where SMS is used.',
+      },
+      {
+        title: 'Data Security',
+        body: 'We use reasonable administrative, technical, and operational safeguards designed to protect information. No system is perfectly secure, and users should avoid submitting sensitive information unless it is necessary for the business purpose.',
+      },
+      {
+        title: 'Retention',
+        body: 'We retain information for as long as reasonably needed for business operations, project records, security, compliance, dispute resolution, and workflow continuity, unless a longer period is required or permitted by law.',
+      },
+      {
+        title: 'Your Choices',
+        body: 'You may contact us to request review, correction, or deletion of information where applicable. Some records may need to be retained for legitimate business, security, legal, or operational reasons.',
+      },
+      {
+        title: 'Contact',
+        body: 'Privacy questions can be sent to info@ampremiersolutions.com.',
+      },
+    ],
+  },
+} as const
+
+type LegalPath = keyof typeof legalPages
+
 function App() {
   const [routePath, setRoutePath] = useState(() => window.location.pathname)
   const [selectedRole, setSelectedRole] = useState<(typeof roles)[number]>('Client')
@@ -968,6 +1059,7 @@ function App() {
   const isCampaignsRoute = routePath === '/campaigns'
   const isProposalsRoute = routePath === '/proposals'
   const isChatRoute = routePath === '/chat'
+  const isLegalRoute = routePath === '/terms' || routePath === '/privacy'
   const operatingProjects = useMemo(
     () => [
       ...projectStatuses,
@@ -2737,6 +2829,66 @@ function App() {
       error
         ? `${workType} work order could not be saved. Check intake policies.`
         : `${workType} work order created for ${project.project_name}.`,
+    )
+  }
+
+  if (isLegalRoute) {
+    const legalPage = legalPages[routePath as LegalPath]
+    const alternateLink = routePath === '/terms' ? '/privacy' : '/terms'
+    const alternateLabel = routePath === '/terms' ? 'Privacy Policy' : 'Terms of Service'
+
+    return (
+      <main className="portal-shell legal-page-shell">
+        <nav className="topbar" aria-label="Legal page navigation">
+          <button
+            type="button"
+            className="brand brand-button"
+            aria-label="Return to AM Premier Connect home"
+            onClick={() => navigateTo('/')}
+          >
+            <span className="brand-mark brand-logo-mark">
+              <img src={brandLogo} alt="" />
+            </span>
+            <span>
+              <strong>AM Premier Connect</strong>
+              <small>{legalPage.eyebrow}</small>
+            </span>
+          </button>
+          <div className="nav-actions">
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/')}>
+              Home
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo(alternateLink)}>
+              {alternateLabel}
+            </button>
+          </div>
+        </nav>
+
+        <section className="legal-document">
+          <p className="eyebrow">{legalPage.eyebrow}</p>
+          <h1>{legalPage.title}</h1>
+          <p className="legal-summary">{legalPage.summary}</p>
+          <p className="legal-updated">Last updated: {legalPage.updated}</p>
+
+          <div className="legal-section-list">
+            {legalPage.sections.map((section) => (
+              <section key={section.title}>
+                <h2>{section.title}</h2>
+                <p>{section.body}</p>
+              </section>
+            ))}
+          </div>
+
+          <div className="legal-footer-actions">
+            <button type="button" className="secondary-action" onClick={() => navigateTo('/')}>
+              Portal Home <ArrowRight size={18} />
+            </button>
+            <button type="button" className="secondary-action" onClick={() => navigateTo(alternateLink)}>
+              {alternateLabel} <FileText size={18} />
+            </button>
+          </div>
+        </section>
+      </main>
     )
   }
 
@@ -5784,6 +5936,12 @@ function App() {
         <div className="nav-actions">
           <a href="#access">Request Portal Approval</a>
           <a href="#intake">Start Intake</a>
+          <button type="button" onClick={() => navigateTo('/terms')}>
+            Terms
+          </button>
+          <button type="button" onClick={() => navigateTo('/privacy')}>
+            Privacy
+          </button>
           {isInternal && (
             <button type="button" onClick={() => navigateTo('/crm')}>
               CRM
@@ -6072,6 +6230,14 @@ function App() {
               <span>{isInternal ? 'Internal admin controls enabled.' : 'Secure portal workflow active.'}</span>
             </div>
           </div>
+          <div className="download-rail">
+            <a className="full-button" href="/api/downloads/tiktok-owned-comments-approval-first" download>
+              Download TikTok workflow JSON
+            </a>
+            <p className="panel-note">
+              Opens the approval-first TikTok comment workflow export for import into n8n.
+            </p>
+          </div>
           {(adminStatus || profileStatus) && (
             <div className="success-note" role="status">
               <ShieldCheck size={18} />
@@ -6145,6 +6311,18 @@ function App() {
           )}
         </div>
       </section>
+
+      <footer className="site-footer">
+        <span>AM Premier Connect</span>
+        <div>
+          <button type="button" onClick={() => navigateTo('/terms')}>
+            Terms of Service
+          </button>
+          <button type="button" onClick={() => navigateTo('/privacy')}>
+            Privacy Policy
+          </button>
+        </div>
+      </footer>
     </main>
   )
 }
