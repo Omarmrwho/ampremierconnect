@@ -267,10 +267,18 @@ type VictorInventoryOffer = {
   receivedAt: string
   sentAt: string
   from: string
+  senderName?: string
+  senderEmail?: string
+  senderLabel?: string
   subject: string
   preview: string
   detailsText: string
   images: string[]
+  bodyFiles?: Array<{
+    href: string
+    label: string
+  }>
+  suppressedSignatureImages?: number
   forwardedToJori: boolean
   source: string
   fields: {
@@ -1106,6 +1114,7 @@ function App() {
   const [lastGeneratedProposalId, setLastGeneratedProposalId] = useState<string | null>(null)
   const [inventorySearch, setInventorySearch] = useState('')
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('all')
+  const [inventorySenderFilter, setInventorySenderFilter] = useState('all')
   const [inventoryPowerOnly, setInventoryPowerOnly] = useState(true)
   const [selectedInventoryRef, setSelectedInventoryRef] = useState<string | null>(null)
   const [inventoryData, setInventoryData] = useState<VictorInventoryPayload>(emptyVictorInventory)
@@ -1142,15 +1151,28 @@ function App() {
     'all',
     ...Array.from(new Set(inventoryData.offers.map((offer) => offer.category).filter(Boolean))).sort(),
   ]
+  const inventorySenders = [
+    'all',
+    ...Array.from(
+      new Set(
+        inventoryData.offers
+          .map((offer) => offer.senderLabel || offer.senderEmail || offer.from)
+          .filter(Boolean),
+      ),
+    ).sort(),
+  ]
   const inventorySearchText = inventorySearch.trim().toLowerCase()
   const filteredInventoryOffers = inventoryData.offers.filter((offer) => {
     const matchesPower = inventoryPowerOnly ? offer.powerRelevant : true
     const matchesCategory = inventoryCategoryFilter === 'all' || offer.category === inventoryCategoryFilter
+    const offerSender = offer.senderLabel || offer.senderEmail || offer.from
+    const matchesSender = inventorySenderFilter === 'all' || offerSender === inventorySenderFilter
     const matchesSearch = inventorySearchText
       ? [
           offer.reference,
           offer.title,
           offer.category,
+          offerSender,
           offer.subject,
           offer.preview,
           offer.fields.brand,
@@ -1166,7 +1188,7 @@ function App() {
           .includes(inventorySearchText)
       : true
 
-    return matchesPower && matchesCategory && matchesSearch
+    return matchesPower && matchesCategory && matchesSender && matchesSearch
   })
   const selectedInventoryOffer =
     filteredInventoryOffers.find((offer) => offer.reference === selectedInventoryRef) ||
@@ -3146,6 +3168,16 @@ function App() {
                       ))}
                     </select>
                   </label>
+                  <label>
+                    Sender
+                    <select value={inventorySenderFilter} onChange={(event) => setInventorySenderFilter(event.target.value)}>
+                      {inventorySenders.map((sender) => (
+                        <option key={sender} value={sender}>
+                          {sender === 'all' ? 'All senders' : sender}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="inventory-toggle">
                     <input
                       checked={inventoryPowerOnly}
@@ -3162,6 +3194,7 @@ function App() {
                       <tr>
                         <th>Ref</th>
                         <th>Equipment</th>
+                        <th>Sender</th>
                         <th>Capacity</th>
                         <th>Fuel</th>
                         <th>Year</th>
@@ -3186,6 +3219,7 @@ function App() {
                             <strong>{offer.title}</strong>
                             <span>{offer.category}</span>
                           </td>
+                          <td>{offer.senderName || offer.senderEmail || offer.from || 'Unknown'}</td>
                           <td>{offer.fields.capacity || offer.fields.kva || 'TBD'}</td>
                           <td>{offer.fields.fuel || 'TBD'}</td>
                           <td>{offer.fields.year || 'TBD'}</td>
@@ -3210,7 +3244,13 @@ function App() {
                       <Image size={20} />
                       <div>
                         <h2>{selectedInventoryOffer.reference}</h2>
-                        <p>{selectedInventoryOffer.receivedAt.slice(0, 10)} · {selectedInventoryOffer.source}</p>
+                        <p>
+                          {selectedInventoryOffer.receivedAt.slice(0, 10)} ·{' '}
+                          {selectedInventoryOffer.senderLabel ||
+                            selectedInventoryOffer.senderEmail ||
+                            selectedInventoryOffer.from ||
+                            selectedInventoryOffer.source}
+                        </p>
                       </div>
                     </div>
                     <h3>{selectedInventoryOffer.title}</h3>
@@ -3226,6 +3266,15 @@ function App() {
                       )}
                     </div>
                     <dl className="inventory-fact-grid">
+                      <div>
+                        <dt>Sender</dt>
+                        <dd>
+                          {selectedInventoryOffer.senderLabel ||
+                            selectedInventoryOffer.senderEmail ||
+                            selectedInventoryOffer.from ||
+                            'Unknown'}
+                        </dd>
+                      </div>
                       <div>
                         <dt>Brand</dt>
                         <dd>{selectedInventoryOffer.fields.brand || 'TBD'}</dd>
@@ -3259,6 +3308,18 @@ function App() {
                         <dd>{selectedInventoryOffer.fields.warranty || 'TBD'}</dd>
                       </div>
                     </dl>
+                    {selectedInventoryOffer.bodyFiles && selectedInventoryOffer.bodyFiles.length > 0 && (
+                      <div className="inventory-source-note">
+                        <strong>Email body files</strong>
+                        <div className="inventory-file-list">
+                          {selectedInventoryOffer.bodyFiles.map((file) => (
+                            <a href={file.href} target="_blank" rel="noreferrer" key={file.href}>
+                              {file.label || file.href}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="inventory-source-note">
                       <strong>Subject</strong>
                       <p>{selectedInventoryOffer.subject}</p>

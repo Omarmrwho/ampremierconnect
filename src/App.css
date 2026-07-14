@@ -4512,7 +4512,7 @@ textarea {
 }
 
 .inventory-toolbar {
-  grid-template-columns: minmax(220px, 1fr) minmax(190px, 240px) minmax(180px, auto);
+  grid-template-columns: minmax(220px, 1fr) minmax(170px, 220px) minmax(210px, 280px) minmax(180px, auto);
   align-items: end;
 }
 
@@ -4545,7 +4545,7 @@ textarea {
 }
 
 .inventory-table {
-  min-width: 980px;
+  min-width: 1100px;
 }
 
 .inventory-table tbody tr {
@@ -4650,6 +4650,24 @@ textarea {
   margin: 6px 0 0;
   color: #415057;
   line-height: 1.45;
+}
+
+.inventory-file-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.inventory-file-list a {
+  color: #133c4f;
+  font-size: 13px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.inventory-file-list a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 1180px) {

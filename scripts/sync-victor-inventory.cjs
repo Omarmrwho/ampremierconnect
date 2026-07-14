@@ -131,11 +131,62 @@ function extractImages(html) {
   const seen = new Set();
   for (const match of String(html || '').matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)) {
     const src = decodeEntities(match[1]).trim();
-    if (!src || src.includes('/track.php') || src.startsWith('cid:') || seen.has(src)) continue;
+    if (!src || isTrackingOrInlineAsset(src) || seen.has(src)) continue;
     seen.add(src);
     images.push(src);
   }
   return images;
+}
+
+function extractBodyFiles(html) {
+  const files = [];
+  const seen = new Set();
+  for (const match of String(html || '').matchAll(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    const href = decodeEntities(match[1]).trim();
+    const label = clean(htmlToText(match[2]) || href);
+    if (!href || isTrackingOrInlineAsset(href) || !isLikelyOfferFile(href, label) || seen.has(href)) continue;
+    seen.add(href);
+    files.push({ href, label: label.slice(0, 120) });
+  }
+  return files;
+}
+
+function isTrackingOrInlineAsset(src) {
+  const value = String(src || '').toLowerCase();
+  return (
+    value.startsWith('cid:') ||
+    value.includes('/track.php') ||
+    value.includes('/open.php') ||
+    value.includes('utm_') ||
+    value.includes('pixel') ||
+    value.includes('beacon')
+  );
+}
+
+function isLikelyOfferFile(href, label) {
+  const value = `${href} ${label}`.toLowerCase();
+  return /\.(?:pdf|docx?|xlsx?|csv|zip|jpg|jpeg|png|webp|avif)(?:[?#].*)?$/.test(href.toLowerCase()) ||
+    /\b(?:download|spec|specification|datasheet|brochure|photo|picture|image|file|attachment)\b/.test(value);
+}
+
+function removeRecurringSignatureImages(offers) {
+  const imageCounts = new Map();
+  for (const offer of offers) {
+    for (const image of new Set(offer.images || [])) {
+      imageCounts.set(image, (imageCounts.get(image) || 0) + 1);
+    }
+  }
+  const recurringThreshold = Math.max(3, Math.ceil(offers.length * 0.2));
+  const recurringImages = new Set(
+    [...imageCounts.entries()]
+      .filter(([, count]) => count >= recurringThreshold)
+      .map(([image]) => image),
+  );
+  return offers.map((offer) => ({
+    ...offer,
+    images: (offer.images || []).filter((image) => !recurringImages.has(image)),
+    suppressedSignatureImages: (offer.images || []).filter((image) => recurringImages.has(image)).length,
+  }));
 }
 
 function clean(value) {
@@ -197,6 +248,8 @@ function buildOffer(message) {
   const subject = clean(message.subject || '');
   const html = message.body?.content || '';
   const text = htmlToText(html);
+  const senderName = clean(message.from?.emailAddress?.name || '');
+  const senderEmail = clean(message.from?.emailAddress?.address || victorEmail).toLowerCase();
   const reference = inferRef(subject, text);
   const title = clean(
     text.match(/REFERENCE NUMBER:\s*[A-Z]{2}-\d{3,5}\s*\n?([^\n]+)/i)?.[1] ||
@@ -224,11 +277,15 @@ function buildOffer(message) {
     powerRelevant: powerRelevance(subject, text),
     receivedAt: message.receivedDateTime || '',
     sentAt: message.sentDateTime || '',
-    from: message.from?.emailAddress?.address || victorEmail,
+    from: senderEmail,
+    senderName,
+    senderEmail,
+    senderLabel: senderName ? `${senderName} <${senderEmail}>` : senderEmail,
     subject,
     preview: clean(message.bodyPreview || text).slice(0, 500),
     detailsText: text.slice(0, 5000),
     images: extractImages(html).slice(0, 12),
+    bodyFiles: extractBodyFiles(html).slice(0, 12),
     fields,
     source: 'Victor LeBron / American Plant & Equipment email',
   };
@@ -277,7 +334,7 @@ async function main() {
     if (ref) forwardedRefs.add(ref.toUpperCase());
   }
 
-  const enrichedOffers = offers.map((offer) => ({
+  const enrichedOffers = removeRecurringSignatureImages(offers).map((offer) => ({
     ...offer,
     forwardedToJori: forwardedRefs.has(offer.reference) ||
       forwardSubjects.has(clean(offer.subject).replace(/^(fw|fwd|re):\s*/i, '').toLowerCase()),
