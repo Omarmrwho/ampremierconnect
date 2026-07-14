@@ -258,6 +258,61 @@ type ProjectProposal = {
   next_step: string | null
 }
 
+type VictorInventoryOffer = {
+  id: string
+  reference: string
+  title: string
+  category: string
+  powerRelevant: boolean
+  receivedAt: string
+  sentAt: string
+  from: string
+  subject: string
+  preview: string
+  detailsText: string
+  images: string[]
+  forwardedToJori: boolean
+  source: string
+  fields: {
+    fuel?: string
+    brand?: string
+    model?: string
+    voltage?: string
+    capacity?: string
+    kva?: string
+    hours?: string
+    condition?: string
+    warranty?: string
+    quantity?: string
+    year?: string
+    frequency?: string
+  }
+}
+
+type VictorInventoryPayload = {
+  generatedAt: string
+  sourceMailbox: string
+  sourceSender: string
+  totalOffers: number
+  powerRelevantOffers: number
+  receivedToday: number
+  forwardedToJori: number
+  forwardedToday: number
+  offers: VictorInventoryOffer[]
+}
+
+const emptyVictorInventory: VictorInventoryPayload = {
+  generatedAt: '',
+  sourceMailbox: '',
+  sourceSender: '',
+  totalOffers: 0,
+  powerRelevantOffers: 0,
+  receivedToday: 0,
+  forwardedToJori: 0,
+  forwardedToday: 0,
+  offers: [],
+}
+
 type ProjectIdea = {
   id: string
   project_id: string
@@ -1049,6 +1104,12 @@ function App() {
   const [proposalStatusFilter, setProposalStatusFilter] = useState<ProposalFilter>('all')
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
   const [lastGeneratedProposalId, setLastGeneratedProposalId] = useState<string | null>(null)
+  const [inventorySearch, setInventorySearch] = useState('')
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('all')
+  const [inventoryPowerOnly, setInventoryPowerOnly] = useState(true)
+  const [selectedInventoryRef, setSelectedInventoryRef] = useState<string | null>(null)
+  const [inventoryData, setInventoryData] = useState<VictorInventoryPayload>(emptyVictorInventory)
+  const [inventoryStatus, setInventoryStatus] = useState('')
   const [projectIdeas, setProjectIdeas] = useState<ProjectIdea[]>([])
   const [projectAgentRecommendations, setProjectAgentRecommendations] = useState<ProjectAgentRecommendation[]>([])
   const decisionDrawerRef = useRef<HTMLElement | null>(null)
@@ -1058,6 +1119,7 @@ function App() {
   const isCrmRoute = routePath === '/crm'
   const isCampaignsRoute = routePath === '/campaigns'
   const isProposalsRoute = routePath === '/proposals'
+  const isGeneratorInventoryRoute = routePath === '/generator-inventory'
   const isChatRoute = routePath === '/chat'
   const isLegalRoute = routePath === '/terms' || routePath === '/privacy'
   const operatingProjects = useMemo(
@@ -1076,6 +1138,43 @@ function App() {
   const needsActionProjects = operatingProjects.filter(
     (project) => project.status === 'blocked' || Boolean(project.blocker),
   ).length
+  const inventoryCategories = [
+    'all',
+    ...Array.from(new Set(inventoryData.offers.map((offer) => offer.category).filter(Boolean))).sort(),
+  ]
+  const inventorySearchText = inventorySearch.trim().toLowerCase()
+  const filteredInventoryOffers = inventoryData.offers.filter((offer) => {
+    const matchesPower = inventoryPowerOnly ? offer.powerRelevant : true
+    const matchesCategory = inventoryCategoryFilter === 'all' || offer.category === inventoryCategoryFilter
+    const matchesSearch = inventorySearchText
+      ? [
+          offer.reference,
+          offer.title,
+          offer.category,
+          offer.subject,
+          offer.preview,
+          offer.fields.brand,
+          offer.fields.model,
+          offer.fields.fuel,
+          offer.fields.capacity,
+          offer.fields.year,
+          offer.fields.frequency,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(inventorySearchText)
+      : true
+
+    return matchesPower && matchesCategory && matchesSearch
+  })
+  const selectedInventoryOffer =
+    filteredInventoryOffers.find((offer) => offer.reference === selectedInventoryRef) ||
+    filteredInventoryOffers[0] ||
+    null
+  const inventoryWithImages = filteredInventoryOffers.filter((offer) => offer.images.length > 0).length
+  const inventoryNotForwarded = inventoryData.offers.filter((offer) => !offer.forwardedToJori).length
+  const inventoryDownloadHref = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(inventoryData, null, 2))}`
   const filteredProjects =
     projectFilter === 'all' ? operatingProjects : operatingProjects.filter((project) => project.status === projectFilter)
   const actionQueueProjects = [...operatingProjects]
@@ -1492,6 +1591,34 @@ function App() {
       setWorkspaceTab('proposals')
     }
   }, [isCrmRoute, isCampaignsRoute, isProposalsRoute])
+
+  useEffect(() => {
+    if (!isGeneratorInventoryRoute || !isInternal || !session?.access_token) {
+      return
+    }
+
+    const loadInventory = async () => {
+      setInventoryStatus('Loading Victor inventory...')
+      const response = await fetch('/api/victor-inventory', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+      const payload = await response.json()
+
+      if (!response.ok) {
+        setInventoryStatus(payload.error || 'Inventory could not load.')
+        return
+      }
+
+      setInventoryData(payload as VictorInventoryPayload)
+      setInventoryStatus('')
+    }
+
+    loadInventory().catch(() => {
+      setInventoryStatus('Inventory could not load.')
+    })
+  }, [isGeneratorInventoryRoute, isInternal, session?.access_token])
 
   useEffect(() => {
     if (
@@ -2892,6 +3019,279 @@ function App() {
     )
   }
 
+  if (isGeneratorInventoryRoute) {
+    return (
+      <main className="portal-shell command-page-shell inventory-page-shell">
+        <nav className="topbar" aria-label="Generator inventory navigation">
+          <button
+            type="button"
+            className="brand brand-button"
+            aria-label="Return to AM Premier Connect home"
+            onClick={() => navigateTo('/')}
+          >
+            <span className="brand-mark">AP</span>
+            <span>
+              <strong>AM Premier Connect</strong>
+              <small>Generator inventory</small>
+            </span>
+          </button>
+          <div className="nav-actions">
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/')}>
+              Home
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/command')}>
+              Command
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/crm')}>
+              CRM
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/campaigns')}>
+              Campaigns
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
+              Proposals
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/generator-inventory')}>
+              Inventory
+            </button>
+            {session && (
+              <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
+        </nav>
+
+        {isInternal ? (
+          <section className="command-section command-page inventory-page">
+            <div className="section-heading command-heading">
+              <div>
+                <p className="eyebrow">American Plant inventory</p>
+                <h1>Victor LeBron generator and power equipment sheet.</h1>
+                <p className="hero-text">
+                  Parsed from Elara inbox offers from Victor LeBron at American Plant & Equipment. The sheet keeps source dates,
+                  specs, forwarding status, and available email images together.
+                </p>
+              </div>
+              <a className="refresh-button inventory-download-action" href={inventoryDownloadHref} download="victor-generator-inventory.json">
+                Export JSON <Download size={17} />
+              </a>
+            </div>
+
+            <div className="command-metrics inventory-metrics" aria-label="Generator inventory summary">
+              <div>
+                <span>Total Offers</span>
+                <strong>{inventoryData.totalOffers}</strong>
+              </div>
+              <div>
+                <span>Power Relevant</span>
+                <strong>{inventoryData.powerRelevantOffers}</strong>
+              </div>
+              <div>
+                <span>Received Today</span>
+                <strong>{inventoryData.receivedToday}</strong>
+              </div>
+              <div>
+                <span>Forwarded Today</span>
+                <strong>{inventoryData.forwardedToday}</strong>
+              </div>
+              <div>
+                <span>With Images</span>
+                <strong>{inventoryWithImages}</strong>
+              </div>
+              <div>
+                <span>Not Forwarded</span>
+                <strong>{inventoryNotForwarded}</strong>
+              </div>
+            </div>
+
+            <section className="inventory-workspace">
+              <section className="inventory-sheet-panel" aria-label="Generator inventory sheet">
+                <div className="workspace-section-head">
+                  <div>
+                    <span className="decision-label">Inventory sheet</span>
+                    <h3>{filteredInventoryOffers.length} visible offers</h3>
+                    <p>
+                      {inventoryData.generatedAt
+                        ? `Last synced ${inventoryData.generatedAt.slice(0, 16).replace('T', ' ')} UTC from ${inventoryData.sourceMailbox}.`
+                        : 'Inventory is waiting for a successful authenticated load.'}
+                    </p>
+                  </div>
+                </div>
+
+                {inventoryStatus && (
+                  <div className="success-note" role="status">
+                    <ShieldCheck size={18} />
+                    <span>{inventoryStatus}</span>
+                  </div>
+                )}
+
+                <div className="crm-toolbar inventory-toolbar" aria-label="Inventory filters">
+                  <label>
+                    Search inventory
+                    <input
+                      value={inventorySearch}
+                      onChange={(event) => setInventorySearch(event.target.value)}
+                      placeholder="Reference, brand, model, MW, fuel, year"
+                      type="search"
+                    />
+                  </label>
+                  <label>
+                    Category
+                    <select value={inventoryCategoryFilter} onChange={(event) => setInventoryCategoryFilter(event.target.value)}>
+                      {inventoryCategories.map((category) => (
+                        <option key={category} value={category}>
+                          {category === 'all' ? 'All categories' : category}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="inventory-toggle">
+                    <input
+                      checked={inventoryPowerOnly}
+                      onChange={(event) => setInventoryPowerOnly(event.target.checked)}
+                      type="checkbox"
+                    />
+                    Power relevant only
+                  </label>
+                </div>
+
+                <div className="inventory-table-wrap">
+                  <table className="crm-table inventory-table">
+                    <thead>
+                      <tr>
+                        <th>Ref</th>
+                        <th>Equipment</th>
+                        <th>Capacity</th>
+                        <th>Fuel</th>
+                        <th>Year</th>
+                        <th>Hz</th>
+                        <th>Images</th>
+                        <th>Jori</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredInventoryOffers.map((offer) => (
+                        <tr
+                          className={selectedInventoryOffer?.reference === offer.reference ? 'selected' : ''}
+                          key={offer.reference}
+                          onClick={() => setSelectedInventoryRef(offer.reference)}
+                        >
+                          <td>
+                            <button type="button" className="table-link-button" onClick={() => setSelectedInventoryRef(offer.reference)}>
+                              {offer.reference}
+                            </button>
+                          </td>
+                          <td>
+                            <strong>{offer.title}</strong>
+                            <span>{offer.category}</span>
+                          </td>
+                          <td>{offer.fields.capacity || offer.fields.kva || 'TBD'}</td>
+                          <td>{offer.fields.fuel || 'TBD'}</td>
+                          <td>{offer.fields.year || 'TBD'}</td>
+                          <td>{offer.fields.frequency || 'TBD'}</td>
+                          <td>{offer.images.length}</td>
+                          <td>
+                            <span className={`inventory-status ${offer.forwardedToJori ? 'sent' : 'missed'}`}>
+                              {offer.forwardedToJori ? 'Forwarded' : 'Not sent'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <aside className="inventory-detail-panel" aria-label="Selected inventory details">
+                {selectedInventoryOffer ? (
+                  <>
+                    <div className="panel-heading">
+                      <Image size={20} />
+                      <div>
+                        <h2>{selectedInventoryOffer.reference}</h2>
+                        <p>{selectedInventoryOffer.receivedAt.slice(0, 10)} · {selectedInventoryOffer.source}</p>
+                      </div>
+                    </div>
+                    <h3>{selectedInventoryOffer.title}</h3>
+                    <div className="inventory-image-strip">
+                      {selectedInventoryOffer.images.length > 0 ? (
+                        selectedInventoryOffer.images.slice(0, 6).map((imageSrc) => (
+                          <a href={imageSrc} target="_blank" rel="noreferrer" key={imageSrc}>
+                            <img src={imageSrc} alt={`${selectedInventoryOffer.reference} equipment`} loading="lazy" />
+                          </a>
+                        ))
+                      ) : (
+                        <div className="empty-inline-note">No image URLs were present in this email.</div>
+                      )}
+                    </div>
+                    <dl className="inventory-fact-grid">
+                      <div>
+                        <dt>Brand</dt>
+                        <dd>{selectedInventoryOffer.fields.brand || 'TBD'}</dd>
+                      </div>
+                      <div>
+                        <dt>Model</dt>
+                        <dd>{selectedInventoryOffer.fields.model || 'TBD'}</dd>
+                      </div>
+                      <div>
+                        <dt>Capacity</dt>
+                        <dd>{selectedInventoryOffer.fields.capacity || selectedInventoryOffer.fields.kva || 'TBD'}</dd>
+                      </div>
+                      <div>
+                        <dt>Voltage</dt>
+                        <dd>{selectedInventoryOffer.fields.voltage || 'TBD'}</dd>
+                      </div>
+                      <div>
+                        <dt>Fuel</dt>
+                        <dd>{selectedInventoryOffer.fields.fuel || 'TBD'}</dd>
+                      </div>
+                      <div>
+                        <dt>Condition</dt>
+                        <dd>{selectedInventoryOffer.fields.condition || 'TBD'}</dd>
+                      </div>
+                      <div>
+                        <dt>Hours</dt>
+                        <dd>{selectedInventoryOffer.fields.hours || 'TBD'}</dd>
+                      </div>
+                      <div>
+                        <dt>Warranty</dt>
+                        <dd>{selectedInventoryOffer.fields.warranty || 'TBD'}</dd>
+                      </div>
+                    </dl>
+                    <div className="inventory-source-note">
+                      <strong>Subject</strong>
+                      <p>{selectedInventoryOffer.subject}</p>
+                    </div>
+                    <div className="inventory-source-note">
+                      <strong>Email details</strong>
+                      <p>{cleanDisplayText(selectedInventoryOffer.detailsText, 900)}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-inline-note">No matching inventory offers.</div>
+                )}
+              </aside>
+            </section>
+          </section>
+        ) : (
+          <section className="command-section command-page">
+            <div className="section-heading command-heading">
+              <div>
+                <p className="eyebrow">Internal access required</p>
+                <h1>Sign in as an internal AM Premier user to view inventory.</h1>
+                <p className="hero-text">Generator inventory contains vendor emails, source records, and operating sales data.</p>
+              </div>
+              <button type="button" className="refresh-button" onClick={() => navigateTo('/')}>
+                Portal Home <ArrowRight size={17} />
+              </button>
+            </div>
+          </section>
+        )}
+      </main>
+    )
+  }
+
   if (isCrmRoute) {
     return (
       <main className="portal-shell command-page-shell crm-page-shell">
@@ -2923,6 +3323,9 @@ function App() {
 	            </button>
 	            <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
 	              Proposals
+	            </button>
+	            <button type="button" className="nav-link-button" onClick={() => navigateTo('/generator-inventory')}>
+	              Inventory
 	            </button>
             {session && (
               <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>
@@ -3804,6 +4207,9 @@ function App() {
             </button>
             <button type="button" className="nav-link-button" onClick={() => navigateTo('/proposals')}>
               Proposals
+            </button>
+            <button type="button" className="nav-link-button" onClick={() => navigateTo('/generator-inventory')}>
+              Inventory
             </button>
             {session && (
               <button type="button" className="icon-button" aria-label="Sign out" onClick={handleSignOut}>

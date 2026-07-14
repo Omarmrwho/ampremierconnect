@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "sync:email-replies": "node scripts/sync-email-replies-to-supabase.cjs --days=14 --top=100 --apply",
+    "sync:victor-inventory": "node scripts/sync-victor-inventory.cjs",
     "preview": "vite preview"
   },
   "dependencies": {
