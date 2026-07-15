@@ -69,6 +69,19 @@
   height: auto;
 }
 
+.brand-app-icon-mark {
+  overflow: hidden;
+  background: #081b3b;
+  border: 1px solid rgba(8, 27, 59, 0.18);
+}
+
+.brand-app-icon-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .brand strong,
 .brand small {
   display: block;

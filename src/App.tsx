@@ -42,6 +42,7 @@ import { isSupabaseConfigured, supabase } from './lib/supabase'
 const roles = ['Client', 'Vendor', 'Internal'] as const
 const openClawWebUrl =
   import.meta.env.VITE_OPENCLAW_WEB_URL || 'https://diffs-maintains-eternal-mathematics.trycloudflare.com/'
+const appIconSrc = '/app-icon-192.png?v=am-icon-20260715'
 
 const roleValues = {
   Client: 'client',
@@ -2995,8 +2996,8 @@ function App() {
             aria-label="Return to AM Premier Connect home"
             onClick={() => navigateTo('/')}
           >
-            <span className="brand-mark brand-logo-mark">
-              <img src={brandLogo} alt="" />
+            <span className="brand-mark brand-app-icon-mark">
+              <img src={appIconSrc} alt="" />
             </span>
             <span>
               <strong>AM Premier Connect</strong>
@@ -3051,7 +3052,9 @@ function App() {
             aria-label="Return to AM Premier Connect home"
             onClick={() => navigateTo('/')}
           >
-            <span className="brand-mark">AP</span>
+            <span className="brand-mark brand-app-icon-mark">
+              <img src={appIconSrc} alt="" />
+            </span>
             <span>
               <strong>AM Premier Connect</strong>
               <small>Generator inventory</small>
@@ -3363,7 +3366,9 @@ function App() {
             aria-label="Return to AM Premier Connect home"
             onClick={() => navigateTo('/')}
           >
-            <span className="brand-mark">AP</span>
+            <span className="brand-mark brand-app-icon-mark">
+              <img src={appIconSrc} alt="" />
+            </span>
             <span>
               <strong>AM Premier Connect</strong>
               <small>CRM pipeline</small>
@@ -4247,7 +4252,9 @@ function App() {
             aria-label="Return to AM Premier Connect home"
             onClick={() => navigateTo('/')}
           >
-            <span className="brand-mark">AP</span>
+            <span className="brand-mark brand-app-icon-mark">
+              <img src={appIconSrc} alt="" />
+            </span>
             <span>
               <strong>AM Premier Connect</strong>
               <small>Internal command portal</small>
@@ -6313,7 +6320,9 @@ function App() {
       <main className="portal-shell chat-page-shell">
         <nav className="topbar" aria-label="Chat navigation">
           <a className="brand" href="/" aria-label="AM Premier Connect home">
-            <span className="brand-mark">AP</span>
+            <span className="brand-mark brand-app-icon-mark">
+              <img src={appIconSrc} alt="" />
+            </span>
             <span>
               <strong>AM Premier Connect</strong>
               <small>Site chat</small>
@@ -6392,8 +6401,8 @@ function App() {
     <main className="portal-shell">
       <nav className="topbar" aria-label="Primary navigation">
         <a className="brand" href="/" aria-label="AM Premier Connect home">
-          <span className="brand-mark brand-logo-mark">
-            <img src={brandLogo} alt="" />
+          <span className="brand-mark brand-app-icon-mark">
+            <img src={appIconSrc} alt="" />
           </span>
           <span>
             <strong>AM Premier Connect</strong>
