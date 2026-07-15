@@ -16,6 +16,7 @@ The app is a Vite + React frontend prepared for Vercel deployment. Phase 3 adds 
 - Internal admin access queue for approving or denying requests
 - Client, vendor, and internal admin access lanes
 - Deployment/status module for the operating queue
+- TikTok workflow download endpoint for the approval-first comment scaffold
 
 ## Vercel Settings
 
@@ -71,3 +72,4 @@ The app will still build without those variables, but form submissions and auth 
 4. Change that account's `role` to `internal`.
 5. Sign out and sign back in on the site.
 6. The internal admin approval queue will appear in the operating queue panel.
+7. Use the TikTok workflow download link in the operating queue to grab the n8n import JSON.

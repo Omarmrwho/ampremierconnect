@@ -1,0 +1,300 @@
+{
+  "name": "TikTok Owned Comments - Approval First",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "tiktok-owned-comments",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -900,
+        -80
+      ],
+      "id": "tt-comments-1",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$json.query[\"hub.challenge\"] || $json.query.challenge || \"OK\"}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -660,
+        -220
+      ],
+      "id": "tt-comments-2",
+      "name": "Respond to Challenge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\nconst items = [];\n\nfunction pushItem(source, raw) {\n  if (!raw) return;\n  const comment_id = String(raw.comment_id || raw.id || raw.comment?.id || raw.parent_comment_id || '');\n  const video_id = String(raw.video_id || raw.media_id || raw.post_id || raw.video?.id || '');\n  const video_url = String(raw.video_url || raw.url || raw.permalink || '');\n  const text = String(raw.text || raw.comment_text || raw.message || raw.comment?.text || '');\n  const username = String(raw.username || raw.user_name || raw.user || raw.from?.username || raw.from?.name || '');\n  const created_at = String(raw.created_at || raw.event_time || raw.create_time || new Date().toISOString());\n  if (!comment_id || !text) return;\n  items.push({\n    source,\n    comment_id,\n    video_id,\n    video_url,\n    username,\n    text,\n    created_at,\n    raw_value: raw\n  });\n}\n\nif (Array.isArray(body.items)) {\n  for (const raw of body.items) pushItem('items', raw);\n} else if (Array.isArray(body.comment_queue)) {\n  for (const raw of body.comment_queue) pushItem('comment_queue', raw);\n} else if (Array.isArray(body.entry)) {\n  for (const entry of body.entry) {\n    for (const change of entry.changes || []) {\n      const value = change.value || {};\n      const from = value.from || value.sender || {};\n      pushItem('webhook', {\n        comment_id: value.comment_id || value.id || value.comment?.id || value.parent_id || '',\n        video_id: value.video_id || value.media_id || value.post_id || value.video?.id || '',\n        video_url: value.video_url || value.permalink || '',\n        text: value.text || value.message || value.comment?.text || '',\n        username: from.username || from.name || '',\n        created_at: value.created_at || value.create_time || entry.time || new Date().toISOString(),\n        raw_value: value\n      });\n    }\n  }\n} else if (body.comment_id || body.text) {\n  pushItem('single', body);\n}\n\nfunction draftReply(text) {\n  const raw = String(text || '').trim();\n  const normalized = raw.toLowerCase();\n\n  if (/^[\\s🔥💯👏🙌⭐️✨]+$/.test(raw)) return raw.includes('🔥') ? 'Appreciate you 🔥' : 'Appreciate you 👏';\n  if (/\\b(agree|couldn.t agree|so true|truth|facts|fact)\\b/i.test(normalized)) return 'Exactly. That is the part people usually learn under pressure.';\n  if (/\\b(attitude|ownership|care|cares|showing up|give a damn)\\b/i.test(normalized)) return 'Exactly. Skill can be taught, ownership is different.';\n  if (/\\b(great|good|solid|love|video|take|advice|insight)\\b/i.test(normalized)) return 'Appreciate that. I try to keep it practical.';\n  if (/\\b(experience|resume|skills?)\\b/i.test(normalized)) return 'Experience matters, but I will take ownership over a perfect resume.';\n  if (/\\b(thanks|thank you)\\b/i.test(normalized)) return 'Appreciate you.';\n  return 'Appreciate you. That part matters more than people think.';\n}\n\nconst holdPatterns = [\n  /\\b(sexy|hot|fine|date|single|marry|wife|husband|flirt|dm me)\\b/i,\n  /\\b(race|racist|black|white|asian|mexican|arab|jew|muslim|christian)\\b/i,\n  /\\b(trump|biden|republican|democrat|politics|election)\\b/i,\n  /\\b(contract|lawsuit|sue|attorney|legal|payment|invoice|invest|investment)\\b/i,\n  /\\b(fuck|shit|bitch|asshole|idiot|stupid)\\b/i,\n];\n\nconst replyMode = $env.TIKTOK_COMMENT_POST_URL ? 'connector' : 'approval';\n\nreturn items.map((item) => {\n  const normalized = item.text.toLowerCase();\n  const risk = holdPatterns.some((pattern) => pattern.test(normalized)) ? 'hold_for_omar' : 'safe';\n  return {\n    json: {\n      ...item,\n      risk,\n      reply_mode: replyMode,\n      reply: risk === 'safe' ? draftReply(item.text) : '',\n      status: risk === 'safe' ? 'drafted' : 'held'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        -20
+      ],
+      "id": "tt-comments-3",
+      "name": "Normalize and Draft"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "tt-notify-check",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "ignored",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -380,
+        -20
+      ],
+      "id": "tt-comments-4",
+      "name": "Needs Review?"
+    },
+    {
+      "parameters": {
+        "chatId": "5586492817",
+        "text": "=TikTok comment {{$json.status === 'held' ? 'held for Omar' : 'drafted'}}\n\nFrom: @{{$json.username}}\nComment: \"{{$json.text}}\"\nVideo: {{$json.video_url || $json.video_id}}\n\nRisk: {{$json.risk}}\nReply mode: {{$json.reply_mode}}\n\n{{$json.reply ? 'Draft reply: ' + $json.reply : 'No public reply drafted.'}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -120,
+        -140
+      ],
+      "id": "tt-comments-5",
+      "name": "Send Approval to Telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "DiJnADOjb0nnEMj2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "tt-connector-check",
+              "leftValue": "={{$json.reply_mode}}",
+              "rightValue": "connector",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "tt-connector-status",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "drafted",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        -140
+      ],
+      "id": "tt-comments-6",
+      "name": "Connector Enabled?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.TIKTOK_COMMENT_POST_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"video_id\": \"{{$json.video_id}}\",\n  \"video_url\": \"{{$json.video_url}}\",\n  \"comment_id\": \"{{$json.comment_id}}\",\n  \"username\": \"{{$json.username}}\",\n  \"reply\": \"{{$json.reply}}\",\n  \"source\": \"n8n\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        420,
+        -240
+      ],
+      "id": "tt-comments-7",
+      "name": "Forward Reply to Connector"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "EVENT_RECEIVED",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        680,
+        -240
+      ],
+      "id": "tt-comments-8",
+      "name": "Respond Event Received"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "IGNORED",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -120,
+        100
+      ],
+      "id": "tt-comments-9",
+      "name": "Respond Event Ignored"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize and Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Draft": {
+      "main": [
+        [
+          {
+            "node": "Needs Review?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Review?": {
+      "main": [
+        [
+          {
+            "node": "Send Approval to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Event Ignored",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Connector Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Connector Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Forward Reply to Connector",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Event Received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward Reply to Connector": {
+      "main": [
+        [
+          {
+            "node": "Respond Event Received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "active": false,
+  "tags": []
+}
