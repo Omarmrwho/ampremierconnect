@@ -9,6 +9,7 @@ const workspaceRoot = path.resolve(appRoot, '..');
 const envPath = path.join(appRoot, '.env.local');
 const secretsRoot = path.join(process.env.HOME || '/root', '.openclaw', 'secrets');
 const tokenPath = path.join(secretsRoot, 'elara-graph-delegated-token.json');
+const mailConfigPath = path.join(secretsRoot, 'elara-graph-mail.json');
 const clientSecretPath = path.join(secretsRoot, 'client_secret.txt');
 const syncStatePath = path.join(workspaceRoot, 'memory', 'ampremierconnect-email-reply-sync-state.json');
 
@@ -102,9 +103,45 @@ async function refreshGraphToken() {
   return res.body.access_token;
 }
 
+async function getAppGraphToken() {
+  const config = readJson(mailConfigPath);
+  const params = {
+    client_id: config.clientId,
+    client_secret: readText(clientSecretPath),
+    scope: 'https://graph.microsoft.com/.default',
+    grant_type: 'client_credentials',
+  };
+
+  const body = new URLSearchParams(params).toString();
+  const res = await request(
+    `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`,
+    { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+    body,
+  );
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`Graph app token failed HTTP ${res.status}: ${JSON.stringify(res.body)}`);
+  }
+  return { accessToken: res.body.access_token, mailbox: config.from };
+}
+
+function appMailboxPath(pathname, mailbox) {
+  if (!mailbox || !pathname.startsWith('/me/')) return pathname;
+  return `/users/${encodeURIComponent(mailbox)}/${pathname.slice('/me/'.length)}`;
+}
+
 async function graph(pathname) {
-  const token = await refreshGraphToken();
-  const res = await request(`https://graph.microsoft.com/v1.0${pathname}`, {
+  let token;
+  let requestPath = pathname;
+  try {
+    token = await refreshGraphToken();
+  } catch (error) {
+    if (!/AADSTS50173|invalid_grant|revoked/i.test(error.message)) throw error;
+    const appToken = await getAppGraphToken();
+    token = appToken.accessToken;
+    requestPath = appMailboxPath(pathname, appToken.mailbox);
+  }
+
+  const res = await request(`https://graph.microsoft.com/v1.0${requestPath}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (res.status < 200 || res.status >= 300) {
