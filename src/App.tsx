@@ -41,7 +41,7 @@ import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const roles = ['Client', 'Vendor', 'Internal'] as const
 const openClawWebUrl =
-  import.meta.env.VITE_OPENCLAW_WEB_URL || 'https://diffs-maintains-eternal-mathematics.trycloudflare.com/'
+  import.meta.env.VITE_OPENCLAW_WEB_URL || 'https://arrived-launch-roy-combined.trycloudflare.com/'
 const appIconSrc = '/app-icon-192.png?v=am-icon-20260715'
 
 const roleValues = {
