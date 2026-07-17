@@ -46,11 +46,6 @@ export default async function handler(request: any, response: any) {
     return
   }
 
-  if (!openClawGatewayToken) {
-    json(response, 500, { error: 'OpenClaw gateway token is not configured on the server.' })
-    return
-  }
-
   const accessToken = getBearerToken(request.headers.authorization)
   if (!accessToken) {
     json(response, 401, { error: 'Missing portal session.' })
@@ -83,6 +78,11 @@ export default async function handler(request: any, response: any) {
 
   if (profileError || profile?.role !== 'internal') {
     json(response, 403, { error: 'Only internal users can open the OpenClaw workspace.' })
+    return
+  }
+
+  if (!openClawGatewayToken) {
+    json(response, 500, { error: 'OpenClaw gateway token is not configured on the server.' })
     return
   }
 
