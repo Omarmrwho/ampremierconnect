@@ -40,8 +40,6 @@ import proposalMedia from './assets/am-premier-media.jpg'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const roles = ['Client', 'Vendor', 'Internal'] as const
-const openClawWebUrl =
-  import.meta.env.VITE_OPENCLAW_WEB_URL || 'https://arrived-launch-roy-combined.trycloudflare.com/'
 const appIconSrc = '/app-icon-192.png?v=am-icon-20260715'
 
 const roleValues = {
@@ -1086,6 +1084,7 @@ function App() {
   const [adminStatus, setAdminStatus] = useState('')
   const [projectStatuses, setProjectStatuses] = useState<ProjectSessionStatus[]>([])
   const [projectStatusMessage, setProjectStatusMessage] = useState('')
+  const [chatLinkStatus, setChatLinkStatus] = useState('')
   const [followUpWaveStatus, setFollowUpWaveStatus] = useState<Record<string, { tone: 'loading' | 'success' | 'error'; message: string }>>({})
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>('all')
   const [selectedActionProjectId, setSelectedActionProjectId] = useState<string | null>(null)
@@ -1731,6 +1730,44 @@ function App() {
     window.history.pushState({}, '', path)
     setRoutePath(path)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const openOpenClawWorkspace = async () => {
+    if (!session?.access_token) {
+      setChatLinkStatus('Portal session is missing. Sign in again before opening OpenClaw.')
+      return
+    }
+
+    const popup = window.open('about:blank', '_blank')
+    setChatLinkStatus('Preparing secure OpenClaw link...')
+
+    try {
+      const response = await fetch('/api/openclaw-link', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ session: 'main' }),
+      })
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok || !payload?.url) {
+        popup?.close()
+        setChatLinkStatus(payload?.error || 'OpenClaw link could not be prepared.')
+        return
+      }
+
+      if (popup) {
+        popup.location.href = payload.url
+      } else {
+        window.location.href = payload.url
+      }
+      setChatLinkStatus('')
+    } catch (error) {
+      popup?.close()
+      setChatLinkStatus(error instanceof Error ? error.message : 'OpenClaw link could not be prepared.')
+    }
   }
 
   const loadAccessRequests = async () => {
@@ -6371,9 +6408,10 @@ function App() {
                   This opens the active OpenClaw workspace, main chat, memory, tools, and control surface through the
                   secure web access gate.
                 </p>
-                <a className="full-button" href={openClawWebUrl} rel="noreferrer" target="_blank">
+                <button className="full-button" type="button" onClick={openOpenClawWorkspace}>
                   Open Elara Workspace <ExternalLink size={18} />
-                </a>
+                </button>
+                {chatLinkStatus && <p className="form-status">{chatLinkStatus}</p>}
               </article>
             </div>
           ) : (

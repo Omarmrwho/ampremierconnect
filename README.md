@@ -59,10 +59,11 @@ Create a Supabase project, run `supabase/schema.sql` in the SQL editor, enable e
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-VITE_OPENCLAW_WEB_URL
+OPENCLAW_WEB_URL
+OPENCLAW_GATEWAY_TOKEN
 ```
 
-The app will still build without those variables, but form submissions and auth will only be staged in the browser until the Supabase variables are present. Workspace deletion needs `SUPABASE_SERVICE_ROLE_KEY` because the server deletes dependent CRM, proposal, campaign, task, idea, and agent rows before removing the workspace. The `/chat` route opens the real OpenClaw web access gate configured by `VITE_OPENCLAW_WEB_URL`; it is not a separate site-only chat thread.
+The app will still build without those variables, but form submissions and auth will only be staged in the browser until the Supabase variables are present. Workspace deletion needs `SUPABASE_SERVICE_ROLE_KEY` because the server deletes dependent CRM, proposal, campaign, task, idea, and agent rows before removing the workspace. The `/chat` route opens the real OpenClaw web access gate configured by `OPENCLAW_WEB_URL` and signs it with the server-only `OPENCLAW_GATEWAY_TOKEN`; it is not a separate site-only chat thread.
 
 ## Admin Setup
 
