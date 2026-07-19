@@ -68,7 +68,7 @@ The app will still build without those variables, but form submissions and auth 
 Current OpenClaw web gate:
 
 ```text
-OPENCLAW_WEB_URL=https://reasonable-started-sorted-houses.trycloudflare.com/
+OPENCLAW_WEB_URL=https://textbook-casio-bishop-misc.trycloudflare.com/
 ```
 
 ## Admin Setup

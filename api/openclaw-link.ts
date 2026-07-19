@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
-const openClawWebUrl = 'https://reasonable-started-sorted-houses.trycloudflare.com/'
+const openClawWebUrl = 'https://textbook-casio-bishop-misc.trycloudflare.com/'
 const openClawGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN || process.env.GATEWAY_AUTH_TOKEN
 
 const json = (response: any, status: number, payload: unknown) => {
