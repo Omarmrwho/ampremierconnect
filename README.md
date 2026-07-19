@@ -65,6 +65,12 @@ OPENCLAW_GATEWAY_TOKEN
 
 The app will still build without those variables, but form submissions and auth will only be staged in the browser until the Supabase variables are present. Workspace deletion needs `SUPABASE_SERVICE_ROLE_KEY` because the server deletes dependent CRM, proposal, campaign, task, idea, and agent rows before removing the workspace. The `/chat` route opens the real OpenClaw web access gate configured by `OPENCLAW_WEB_URL` and signs it with the server-only `OPENCLAW_GATEWAY_TOKEN`; it is not a separate site-only chat thread.
 
+Current OpenClaw web gate:
+
+```text
+OPENCLAW_WEB_URL=https://reasonable-started-sorted-houses.trycloudflare.com/
+```
+
 ## Admin Setup
 
 1. Apply the latest `supabase/schema.sql`.

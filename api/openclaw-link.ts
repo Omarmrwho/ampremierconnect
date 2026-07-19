@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABA
 const openClawWebUrl =
   process.env.OPENCLAW_WEB_URL ||
   process.env.VITE_OPENCLAW_WEB_URL ||
-  'https://arrived-launch-roy-combined.trycloudflare.com/'
+  'https://reasonable-started-sorted-houses.trycloudflare.com/'
 const openClawGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN || process.env.GATEWAY_AUTH_TOKEN
 
 const json = (response: any, status: number, payload: unknown) => {
