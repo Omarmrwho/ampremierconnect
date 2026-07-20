@@ -65,7 +65,9 @@ OPENCLAW_GATEWAY_TOKEN
 
 The app will still build without those variables, but form submissions and auth will only be staged in the browser until the Supabase variables are present. Workspace deletion needs `SUPABASE_SERVICE_ROLE_KEY` because the server deletes dependent CRM, proposal, campaign, task, idea, and agent rows before removing the workspace. The `/chat` route opens the real OpenClaw web access gate and signs it with the server-only `OPENCLAW_GATEWAY_TOKEN`; it is not a separate site-only chat thread.
 
-Current OpenClaw web gate:
+Set `OPENCLAW_WEB_URL` to the current Web Elara / OpenClaw browser gate. Cloudflare quick-tunnel URLs can rotate, so update this variable in Vercel when the active gate changes.
+
+Fallback OpenClaw web gate in source:
 
 ```text
 OPENCLAW_WEB_URL=https://textbook-casio-bishop-misc.trycloudflare.com/
