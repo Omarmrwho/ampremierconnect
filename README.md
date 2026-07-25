@@ -70,7 +70,7 @@ Set `OPENCLAW_WEB_URL` to the current Web Elara / OpenClaw browser gate. Cloudfl
 Fallback OpenClaw web gate in source:
 
 ```text
-OPENCLAW_WEB_URL=https://textbook-casio-bishop-misc.trycloudflare.com/
+OPENCLAW_WEB_URL=https://issued-extensions-automobile-began.trycloudflare.com/
 ```
 
 ## Admin Setup
