@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
-const openClawWebUrl = 'https://issued-extensions-automobile-began.trycloudflare.com/'
+const openClawWebUrl = 'https://mirror-author-pursuit-boston.trycloudflare.com/'
 const openClawGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN || process.env.GATEWAY_AUTH_TOKEN
 
 const json = (response: any, status: number, payload: unknown) => {
@@ -24,9 +24,7 @@ const buildOpenClawUrl = () => {
   url.searchParams.set('session', url.searchParams.get('session') || 'main')
 
   if (openClawGatewayToken) {
-    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''))
-    hashParams.set('token', openClawGatewayToken)
-    url.hash = hashParams.toString()
+    url.searchParams.set('token', openClawGatewayToken)
   }
 
   return url.toString()
