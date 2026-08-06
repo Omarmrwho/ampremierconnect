@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
-const openClawWebUrl = 'https://kid-characteristic-pressure-spaces.trycloudflare.com/'
+const openClawWebUrl = process.env.OPENCLAW_WEB_URL || 'https://banner-industry-carriers-palmer.trycloudflare.com/'
 const openClawGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN || process.env.GATEWAY_AUTH_TOKEN
 
 const json = (response: any, status: number, payload: unknown) => {
@@ -14,7 +14,7 @@ const getBearerToken = (header: string | undefined) => {
   return match?.[1] || ''
 }
 
-const buildOpenClawUrl = () => {
+const buildOpenClawUrl = (portalSessionToken: string) => {
   const url = new URL(openClawWebUrl)
 
   if (!url.pathname || url.pathname === '/') {
@@ -22,6 +22,7 @@ const buildOpenClawUrl = () => {
   }
 
   url.searchParams.set('session', url.searchParams.get('session') || 'main')
+  url.searchParams.set('portal_session', portalSessionToken)
 
   if (openClawGatewayToken) {
     url.searchParams.set('token', openClawGatewayToken)
@@ -77,11 +78,6 @@ export default async function handler(request: any, response: any) {
     return
   }
 
-  if (!openClawGatewayToken) {
-    json(response, 500, { error: 'OpenClaw gateway token is not configured on the server.' })
-    return
-  }
-
   response.setHeader('Cache-Control', 'private, no-store')
-  json(response, 200, { url: buildOpenClawUrl() })
+  json(response, 200, { url: buildOpenClawUrl(accessToken) })
 }
