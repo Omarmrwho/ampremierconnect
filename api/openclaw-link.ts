@@ -2,7 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
-const openClawWebUrl = process.env.OPENCLAW_WEB_URL || 'https://banner-industry-carriers-palmer.trycloudflare.com/'
+const fallbackOpenClawWebUrl = 'https://banner-industry-carriers-palmer.trycloudflare.com/'
+const configuredOpenClawWebUrl = process.env.OPENCLAW_WEB_URL || ''
+const openClawWebUrl =
+  configuredOpenClawWebUrl && !configuredOpenClawWebUrl.includes('trycloudflare.com')
+    ? configuredOpenClawWebUrl
+    : fallbackOpenClawWebUrl
 const openClawGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN || process.env.GATEWAY_AUTH_TOKEN
 
 const json = (response: any, status: number, payload: unknown) => {
