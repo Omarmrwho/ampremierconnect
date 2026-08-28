@@ -1065,6 +1065,239 @@ const legalPages = {
 
 type LegalPath = keyof typeof legalPages
 
+const divineStats = [
+  { label: 'Event Experience', value: '20 yrs', note: 'Design, production, vendor sourcing, and event-day execution' },
+  { label: 'Growth Lanes', value: '6', note: 'Corporate, production, rentals, education, materials, international' },
+  { label: 'First Target', value: '90 days', note: 'Build sales assets, outreach rhythm, and repeat-account pipeline' },
+]
+
+const divineServices = [
+  {
+    icon: BriefcaseBusiness,
+    title: 'Corporate Events',
+    text: 'Brand activations, product launches, receptions, holiday events, grand openings, VIP rooms, and employee experiences.',
+  },
+  {
+    icon: Building2,
+    title: 'Venue Transformation',
+    text: 'Creative direction, draping, installations, tablescapes, focal moments, and event-day production for memorable rooms.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'Rentals',
+    text: 'Chair, table, draping, fabric, and event inventory support for Divine Designs events and independent rental clients.',
+  },
+  {
+    icon: Lightbulb,
+    title: 'Education',
+    text: 'Professional event design and business development classes for new and growing event industry entrepreneurs.',
+  },
+]
+
+const divineDivisions = [
+  'Corporate accounts',
+  'Event design and production',
+  'Chair and table rentals',
+  'Classes and business development',
+  'Fabric and event material sales',
+  'Middle East workshops',
+]
+
+const divineProofPoints = [
+  'Creative concept development',
+  'Room and venue transformation',
+  'Draping and installations',
+  'Vendor sourcing and coordination',
+  'Proposal and presentation support',
+  'Setup, breakdown, and event-day execution',
+]
+
+const divineOutreachTargets = [
+  'Corporate marketing teams',
+  'Hotels and venues',
+  'Restaurants and lounges',
+  'PR and experiential agencies',
+  'Wedding and event planners',
+  'Caterers and hospitality partners',
+]
+
+function DivineDemoPage() {
+  return (
+    <main className="divine-demo-shell">
+      <nav className="divine-nav" aria-label="Divine Designs demo navigation">
+        <a className="divine-brand" href="/demo" aria-label="Divine Designs and Events demo home">
+          <span>DD</span>
+          <strong>Divine Designs & Events</strong>
+        </a>
+        <div>
+          <a href="#services">Services</a>
+          <a href="#growth">Growth</a>
+          <a href="#contact">Contact</a>
+          <a className="divine-nav-action" href="/downloads/Divine-Designs-Events-Growth-Packet-2026-08-28.pdf">
+            <Download size={17} /> Packet
+          </a>
+          <a className="divine-nav-action" href="/downloads/CLIENT_PROSPECTS_HOUSTON_BATCH_1.csv">
+            <FileText size={17} /> Prospects
+          </a>
+        </div>
+      </nav>
+
+      <section className="divine-hero">
+        <div className="divine-hero-content">
+          <p>Corporate, Luxury, Hospitality, Fashion, Private Events</p>
+          <h1>Divine Designs & Events</h1>
+          <span>
+            Elevated event design, production, and space transformation for clients who want an event to feel intentional,
+            memorable, and visually powerful.
+          </span>
+          <div className="divine-hero-actions">
+            <a href="#contact">
+              Request a Consultation <ArrowRight size={18} />
+            </a>
+            <a href="#growth">
+              View Growth Divisions <Target size={18} />
+            </a>
+            <a href="/downloads/CLIENT_PROSPECTS_HOUSTON_BATCH_1.csv">
+              Download Prospects <FileText size={18} />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className="divine-stat-band" aria-label="Divine Designs business snapshot">
+        {divineStats.map((item) => (
+          <article key={item.label}>
+            <strong>{item.value}</strong>
+            <span>{item.label}</span>
+            <p>{item.note}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="divine-section divine-intro">
+        <div>
+          <p className="divine-eyebrow">What the business sells</p>
+          <h2>Transformation, not basic decor.</h2>
+        </div>
+        <p>
+          Divine Designs & Events turns ordinary or empty spaces into complete environments that guests can walk into,
+          experience, photograph, and remember. The brand should lead with creative direction, production confidence,
+          corporate readiness, luxury taste, and trusted execution.
+        </p>
+      </section>
+
+      <section className="divine-section" id="services">
+        <div className="divine-section-heading">
+          <p className="divine-eyebrow">Services</p>
+          <h2>Built for clients, venues, planners, agencies, and brands.</h2>
+        </div>
+        <div className="divine-service-grid">
+          {divineServices.map((service) => {
+            const Icon = service.icon
+            return (
+              <article key={service.title}>
+                <Icon size={24} />
+                <h3>{service.title}</h3>
+                <p>{service.text}</p>
+              </article>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="divine-media-band">
+        <div className="divine-media-copy">
+          <p className="divine-eyebrow">Production credibility</p>
+          <h2>Nearly 20 years of event experience becomes a larger platform.</h2>
+          <p>
+            Corporate accounts create repeat revenue. Rentals support clients and planners. Classes build authority.
+            Fabric and material sales support students and decorators. International workshops come after the education
+            model is proven.
+          </p>
+        </div>
+        <div className="divine-image-pair" aria-label="Event design visuals">
+          <img
+            src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=900&q=82"
+            alt="Elegant event tablescape with candles and floral arrangements"
+          />
+          <img
+            src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=82"
+            alt="Large event crowd with stage lighting"
+          />
+        </div>
+      </section>
+
+      <section className="divine-section divine-growth" id="growth">
+        <div className="divine-section-heading">
+          <p className="divine-eyebrow">Growth platform</p>
+          <h2>Six divisions that support each other.</h2>
+        </div>
+        <div className="divine-growth-grid">
+          {divineDivisions.map((division, index) => (
+            <article key={division}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <h3>{division}</h3>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="divine-section divine-lists">
+        <div>
+          <p className="divine-eyebrow">Capability</p>
+          <h2>What prospects should remember.</h2>
+          <ul>
+            {divineProofPoints.map((item) => (
+              <li key={item}>
+                <CircleCheck size={18} /> {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <p className="divine-eyebrow">Targets</p>
+          <h2>Who the outreach should reach.</h2>
+          <ul>
+            {divineOutreachTargets.map((item) => (
+              <li key={item}>
+                <UsersRound size={18} /> {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="divine-contact-band" id="contact">
+        <div>
+          <p className="divine-eyebrow">Next move</p>
+          <h2>Start with corporate accounts and partner relationships.</h2>
+          <p>
+            The first outreach push should introduce Divine Designs & Events as a design, production, rental, and
+            transformation partner for corporate events, venues, hotels, planners, caterers, and agencies.
+          </p>
+        </div>
+        <form>
+          <label>
+            Name
+            <input type="text" placeholder="Your name" />
+          </label>
+          <label>
+            Email
+            <input type="email" placeholder="name@company.com" />
+          </label>
+          <label>
+            Event or partnership need
+            <textarea placeholder="Tell us about the event, venue, rental need, or partnership opportunity." />
+          </label>
+          <button type="button">
+            Send Inquiry <Send size={18} />
+          </button>
+        </form>
+      </section>
+    </main>
+  )
+}
+
 function App() {
   const [routePath, setRoutePath] = useState(() => window.location.pathname)
   const [selectedRole, setSelectedRole] = useState<(typeof roles)[number]>('Client')
@@ -1131,6 +1364,7 @@ function App() {
   const isGeneratorInventoryRoute = routePath === '/generator-inventory'
   const isChatRoute = routePath === '/chat'
   const isLegalRoute = routePath === '/terms' || routePath === '/privacy'
+  const isDivineDemoRoute = routePath === '/demo'
   const operatingProjects = useMemo(
     () => [
       ...projectStatuses,
@@ -3017,6 +3251,10 @@ function App() {
         ? `${workType} work order could not be saved. Check intake policies.`
         : `${workType} work order created for ${project.project_name}.`,
     )
+  }
+
+  if (isDivineDemoRoute) {
+    return <DivineDemoPage />
   }
 
   if (isLegalRoute) {

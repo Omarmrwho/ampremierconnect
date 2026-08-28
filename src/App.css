@@ -4708,3 +4708,413 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.divine-demo-shell {
+  min-height: 100vh;
+  color: #241f1c;
+  background: #fbfaf7;
+}
+
+.divine-nav {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 72px;
+  padding: 0 clamp(18px, 5vw, 64px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  background: rgba(30, 24, 22, 0.74);
+  backdrop-filter: blur(16px);
+}
+
+.divine-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.divine-brand span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(184, 137, 91, 0.8);
+  font-weight: 900;
+}
+
+.divine-brand strong {
+  overflow-wrap: anywhere;
+}
+
+.divine-nav div,
+.divine-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.divine-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.divine-nav-action {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.divine-hero {
+  display: flex;
+  align-items: flex-end;
+  min-height: 86vh;
+  min-height: 86dvh;
+  padding: 118px clamp(20px, 6vw, 76px) 58px;
+  color: #ffffff;
+  background:
+    linear-gradient(90deg, rgba(22, 17, 14, 0.82), rgba(22, 17, 14, 0.5) 48%, rgba(22, 17, 14, 0.14)),
+    url('https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=2100&q=86')
+      center/cover;
+}
+
+.divine-hero-content {
+  width: min(760px, 100%);
+}
+
+.divine-hero-content p,
+.divine-eyebrow {
+  margin: 0 0 12px;
+  color: #d8b58d;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.divine-hero-content h1 {
+  max-width: 760px;
+  margin: 0 0 18px;
+  color: #ffffff;
+  font-size: clamp(42px, 8vw, 86px);
+  line-height: 0.95;
+}
+
+.divine-hero-content span {
+  display: block;
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.divine-hero-actions {
+  justify-content: flex-start;
+  margin-top: 30px;
+}
+
+.divine-hero-actions a,
+.divine-contact-band button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #9b5e3c;
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.divine-hero-actions a + a {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.divine-stat-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: #d8c6b4;
+}
+
+.divine-stat-band article {
+  min-height: 132px;
+  padding: 26px clamp(18px, 4vw, 42px);
+  background: #fffaf4;
+}
+
+.divine-stat-band strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #9b5e3c;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.divine-stat-band span {
+  display: block;
+  color: #241f1c;
+  font-weight: 900;
+}
+
+.divine-stat-band p,
+.divine-section p,
+.divine-media-copy p,
+.divine-contact-band p {
+  color: #5c5550;
+  line-height: 1.6;
+}
+
+.divine-section {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: clamp(56px, 8vw, 96px) 0;
+}
+
+.divine-intro {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 70px);
+  align-items: start;
+}
+
+.divine-section h2,
+.divine-media-copy h2,
+.divine-contact-band h2 {
+  max-width: 760px;
+  margin: 0;
+  color: #241f1c;
+  font-size: clamp(30px, 5vw, 54px);
+  line-height: 1.02;
+}
+
+.divine-section-heading {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.divine-service-grid,
+.divine-growth-grid,
+.divine-lists {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.divine-service-grid article,
+.divine-growth-grid article {
+  min-height: 220px;
+  padding: 22px;
+  border: 1px solid #e3d5c8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.divine-service-grid svg {
+  margin-bottom: 18px;
+  color: #9b5e3c;
+}
+
+.divine-service-grid h3,
+.divine-growth-grid h3 {
+  margin: 0 0 10px;
+  color: #241f1c;
+  font-size: 20px;
+}
+
+.divine-media-band {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1fr);
+  gap: clamp(26px, 5vw, 64px);
+  align-items: center;
+  padding: clamp(56px, 8vw, 90px) clamp(20px, 6vw, 76px);
+  background: #efe6dd;
+}
+
+.divine-image-pair {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 12px;
+}
+
+.divine-image-pair img {
+  width: 100%;
+  height: clamp(280px, 38vw, 520px);
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.divine-image-pair img:first-child {
+  margin-top: 42px;
+}
+
+.divine-growth-grid article {
+  min-height: 150px;
+  background: #332720;
+}
+
+.divine-growth-grid span {
+  display: block;
+  margin-bottom: 24px;
+  color: #d8b58d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.divine-growth-grid h3 {
+  color: #ffffff;
+}
+
+.divine-lists {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.divine-lists > div {
+  padding: 30px;
+  border: 1px solid #e3d5c8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.divine-lists ul {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 24px 0 0;
+  list-style: none;
+}
+
+.divine-lists li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #403934;
+  font-weight: 800;
+}
+
+.divine-lists svg {
+  flex: 0 0 auto;
+  color: #9b5e3c;
+}
+
+.divine-contact-band {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(300px, 520px);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: start;
+  padding: clamp(56px, 8vw, 96px) clamp(20px, 6vw, 76px);
+  color: #241f1c;
+  background: #f5f1ec;
+}
+
+.divine-contact-band form {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+  border: 1px solid #e3d5c8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.divine-contact-band label {
+  display: grid;
+  gap: 8px;
+  color: #463e38;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.divine-contact-band input,
+.divine-contact-band textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #d8c6b4;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #241f1c;
+  background: #fffdf9;
+}
+
+.divine-contact-band textarea {
+  min-height: 116px;
+  resize: vertical;
+}
+
+@media (max-width: 920px) {
+  .divine-nav {
+    position: absolute;
+    align-items: flex-start;
+    flex-direction: column;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .divine-nav div {
+    justify-content: flex-start;
+  }
+
+  .divine-hero {
+    min-height: 92vh;
+    padding-top: 178px;
+  }
+
+  .divine-stat-band,
+  .divine-intro,
+  .divine-media-band,
+  .divine-contact-band {
+    grid-template-columns: 1fr;
+  }
+
+  .divine-service-grid,
+  .divine-growth-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .divine-nav a:not(.divine-brand):not(.divine-nav-action) {
+    display: none;
+  }
+
+  .divine-stat-band,
+  .divine-service-grid,
+  .divine-growth-grid,
+  .divine-lists,
+  .divine-image-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .divine-image-pair img:first-child {
+    margin-top: 0;
+  }
+
+  .divine-hero-content span {
+    font-size: 17px;
+  }
+}
