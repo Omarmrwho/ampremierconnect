@@ -380,15 +380,31 @@
         color: var(--white);
         background:
           linear-gradient(180deg, rgba(26, 18, 15, 0.1), rgba(26, 18, 15, 0.78)),
-          url("https://img1.wsimg.com/isteam/ip/b7719b13-b0c2-41c5-b403-efa359cf6fcb/8dd755b4-834f-4e9b-9b98-ddb1c713845b.jpg/:/cr=t:33.3%25,l:0%25,w:100%25,h:66.7%25/rs=w:667,h:667,cg:true")
-            center/cover;
+          var(--event-image) center/cover;
       }
 
-      .event-card:nth-child(2n) {
-        background:
-          linear-gradient(180deg, rgba(26, 18, 15, 0.14), rgba(26, 18, 15, 0.82)),
-          url("https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1400&q=84")
-            center/cover;
+      .event-card:nth-child(1) {
+        --event-image: url("https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1400&q=84");
+      }
+
+      .event-card:nth-child(2) {
+        --event-image: url("https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=84");
+      }
+
+      .event-card:nth-child(3) {
+        --event-image: url("https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=1400&q=84");
+      }
+
+      .event-card:nth-child(4) {
+        --event-image: url("https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=1400&q=84");
+      }
+
+      .event-card:nth-child(5) {
+        --event-image: url("https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1400&q=84");
+      }
+
+      .event-card:nth-child(6) {
+        --event-image: url("https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1400&q=84");
       }
 
       .event-card span {
@@ -403,6 +419,14 @@
         font-family: Georgia, "Times New Roman", serif;
         font-size: 30px;
         font-weight: 500;
+      }
+
+      .event-card p {
+        max-width: 28ch;
+        margin: 8px 0 0;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 14px;
+        line-height: 1.38;
       }
 
       .contact {
@@ -679,12 +703,36 @@
             <h2>From brand moments to private celebrations, the room becomes the message.</h2>
           </div>
           <div class="event-list">
-            <article class="event-card"><span>01</span><h3>Corporate Receptions</h3></article>
-            <article class="event-card"><span>02</span><h3>Hospitality Events</h3></article>
-            <article class="event-card"><span>03</span><h3>Fashion & Beauty Launches</h3></article>
-            <article class="event-card"><span>04</span><h3>Galas & Formal Dinners</h3></article>
-            <article class="event-card"><span>05</span><h3>Milestone Celebrations</h3></article>
-            <article class="event-card"><span>06</span><h3>Private Celebrations</h3></article>
+            <article class="event-card">
+              <span>01</span>
+              <h3>Corporate Receptions</h3>
+              <p>Networking rooms, sponsor moments, executive arrivals, and branded guest flow.</p>
+            </article>
+            <article class="event-card">
+              <span>02</span>
+              <h3>Hospitality Events</h3>
+              <p>Hotel, venue, restaurant, and travel-property environments with VIP polish.</p>
+            </article>
+            <article class="event-card">
+              <span>03</span>
+              <h3>Fashion & Beauty Launches</h3>
+              <p>Runway-adjacent rooms, product reveals, press moments, and editorial styling.</p>
+            </article>
+            <article class="event-card">
+              <span>04</span>
+              <h3>Galas & Formal Dinners</h3>
+              <p>Seated rooms, donor evenings, award dinners, and high-touch table design.</p>
+            </article>
+            <article class="event-card">
+              <span>05</span>
+              <h3>Milestone Celebrations</h3>
+              <p>Birthdays, anniversaries, retirements, and cultural celebrations with scale.</p>
+            </article>
+            <article class="event-card">
+              <span>06</span>
+              <h3>Private Celebrations</h3>
+              <p>Intimate dinner parties, lounges, homes, and private rooms made intentional.</p>
+            </article>
           </div>
         </div>
       </section>
