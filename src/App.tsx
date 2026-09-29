@@ -1131,6 +1131,7 @@ function App() {
   const isGeneratorInventoryRoute = routePath === '/generator-inventory'
   const isChatRoute = routePath === '/chat'
   const isLegalRoute = routePath === '/terms' || routePath === '/privacy'
+  const isAmpaxRoute = routePath === '/ampax'
   const operatingProjects = useMemo(
     () => [
       ...projectStatuses,
@@ -3016,6 +3017,153 @@ function App() {
       error
         ? `${workType} work order could not be saved. Check intake policies.`
         : `${workType} work order created for ${project.project_name}.`,
+    )
+  }
+
+  if (isAmpaxRoute) {
+    const inquiryHref =
+      'mailto:omar@ampremiersolutions.com?subject=Injet%20Ampax%20160%20kW%20DCFC%20Inventory&body=Hello%2C%0A%0AI%20am%20interested%20in%20the%20Injet%20Ampax%20160%20kW%20DC%20fast%20chargers.%20Please%20send%20photos%2C%20serials%2C%20and%20freight%20details.%0A%0ACompany%3A%0AQuantity%20needed%3A%0AProject%20location%3A%0ATimeline%3A'
+
+    return (
+      <main className="ampax-page">
+        <nav className="ampax-nav" aria-label="Ampax inventory navigation">
+          <button
+            type="button"
+            className="brand brand-button"
+            aria-label="Return to AM Premier Connect home"
+            onClick={() => navigateTo('/')}
+          >
+            <span className="brand-mark brand-app-icon-mark">
+              <img src={appIconSrc} alt="" />
+            </span>
+            <span>
+              <strong>AM Premier Connect</strong>
+              <small>DC fast charger inventory</small>
+            </span>
+          </button>
+          <div className="ampax-nav-actions">
+            <a href="/ampax/injet-ampax-specification-us-v2-9.pdf" download>
+              Spec Sheet <Download size={17} />
+            </a>
+            <a href={inquiryHref}>
+              Request Buyer Packet <MailCheck size={17} />
+            </a>
+          </div>
+        </nav>
+
+        <section className="ampax-hero">
+          <div className="ampax-hero-copy">
+            <p className="eyebrow">Available now in Houston</p>
+            <h1>40 new Injet Ampax 160 kW DC fast chargers.</h1>
+            <p className="ampax-lead">
+              Brand-new, crated, unopened commercial Level 3 chargers available for wholesale, resale, installation,
+              fleet, fuel/convenience, dealership, parking, and public charging projects.
+            </p>
+            <div className="ampax-actions">
+              <a className="primary-action" href={inquiryHref}>
+                Request Photos and Serials <ArrowRight size={18} />
+              </a>
+              <a className="secondary-action" href="/ampax/injet-ampax-specification-us-v2-9.pdf" download>
+                Download Spec Sheet <FileText size={18} />
+              </a>
+            </div>
+            <div className="ampax-trust-strip" aria-label="Inventory facts">
+              <span>40 available</span>
+              <span>160 kW confirmed</span>
+              <span>New and crated</span>
+              <span>$65,000/unit</span>
+            </div>
+          </div>
+          <div className="ampax-hero-media">
+            <img src="/ampax/ampax-hero.jpg" alt="Injet Ampax DC fast charger" />
+          </div>
+        </section>
+
+        <section className="ampax-metrics" aria-label="Offer summary">
+          <div>
+            <span>Available Units</span>
+            <strong>40</strong>
+            <small>Out of 50 total inventory</small>
+          </div>
+          <div>
+            <span>Power Rating</span>
+            <strong>160 kW</strong>
+            <small>Commercial DC fast charging</small>
+          </div>
+          <div>
+            <span>Condition</span>
+            <strong>New</strong>
+            <small>Crated, unopened, never installed</small>
+          </div>
+          <div>
+            <span>Price</span>
+            <strong>$65k</strong>
+            <small>Per unit, serious buyers only</small>
+          </div>
+        </section>
+
+        <section className="ampax-content">
+          <article className="ampax-panel">
+            <div className="panel-heading">
+              <Zap size={20} />
+              <div>
+                <h2>Equipment Highlights</h2>
+                <p>Commercial DCFC hardware ready for qualified buyers.</p>
+              </div>
+            </div>
+            <ul>
+              <li>Injet Ampax US-series 160 kW DC fast charging stations.</li>
+              <li>480VAC input, 3P + N + PE wiring, 150-1000VDC output.</li>
+              <li>CCS1 configuration, OCPP support, RFID, 10-inch touchscreen HMI.</li>
+              <li>Ethernet RJ-45 with optional 4G module support.</li>
+              <li>Type 3R enclosure, forced-air cooling, commercial public/fleet use cases.</li>
+            </ul>
+          </article>
+
+          <article className="ampax-panel ampax-photo-panel">
+            <img src="/ampax/ampax-side.jpg" alt="Injet Ampax charger side view" />
+          </article>
+
+          <article className="ampax-panel">
+            <div className="panel-heading">
+              <BadgeCheck size={20} />
+              <div>
+                <h2>Buyer Package</h2>
+                <p>Available after qualification.</p>
+              </div>
+            </div>
+            <ul>
+              <li>Manufacturer specification sheet.</li>
+              <li>Actual photos of the available units.</li>
+              <li>Serial numbers for units under discussion.</li>
+              <li>Houston-area freight coordination details.</li>
+              <li>Purchase quantity and timing review.</li>
+            </ul>
+          </article>
+
+          <article className="ampax-panel ampax-cta-panel">
+            <div className="panel-heading">
+              <ShieldCheck size={20} />
+              <div>
+                <h2>Qualification</h2>
+                <p>We are prioritizing serious buyers who can move quickly.</p>
+              </div>
+            </div>
+            <p>
+              Send company name, intended quantity, project location, close timeline, and whether freight will be
+              buyer-arranged. Full serial list and warehouse-specific information are shared only with qualified buyers.
+            </p>
+            <a className="full-button" href={inquiryHref}>
+              Request Buyer Packet <MailCheck size={18} />
+            </a>
+          </article>
+        </section>
+
+        <footer className="ampax-footer">
+          <span>AM Premier Solutions</span>
+          <span>Houston, Texas inventory. Availability, freight, warranty, and final terms subject to confirmation.</span>
+        </footer>
+      </main>
     )
   }
 
